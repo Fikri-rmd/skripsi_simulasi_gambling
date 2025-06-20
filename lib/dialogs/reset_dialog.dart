@@ -1,0 +1,45 @@
+import 'package:flutter/material.dart';
+
+class ResetSuccessDialog extends StatelessWidget {
+  const ResetSuccessDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      icon: const Icon(Icons.check_circle, color: Colors.green, size: 40),
+      title: Text(
+        'Reset Berhasil!',
+        style: TextStyle(
+          color: Colors.red.shade900,
+          fontWeight: FontWeight.bold,
+          fontSize: 20,
+        ),
+      ),
+      content: Text(
+        'Permainan telah direset ke kondisi awal\n'
+        '🪙 Saldo: 500 Koin\n'
+        '🔁 Spin Counter: 0',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 16,
+          color: Colors.grey.shade700,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'MULAI LAGI',
+            style: TextStyle(
+              color: Colors.red.shade900,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+    );
+  }
+}

@@ -3,8 +3,8 @@ import 'dart:math';
 import 'dart:async';
 
 class SlotGameScreen extends StatefulWidget {
-  const SlotGameScreen({super.key});
-
+  final bool isGuest;
+  const SlotGameScreen({super.key, this.isGuest = false});
   @override
   State<SlotGameScreen> createState() => _SlotGameScreenState();
 }
@@ -14,6 +14,8 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   List<List<String>> _rows = List.generate(4, (_) => List.filled(4, '🎰'));
   int _spinCount = 0;
   bool _isSpinning = false;
+  int _currentNavIndex = 1; // Default to home screen
+  late PageController _pageController;
   
   // Kontroler untuk efek roll vertikal
   List<List<ScrollController>> _scrollControllers = [];
@@ -36,6 +38,18 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   void initState() {
     super.initState();
     
+    _pageController = PageController(initialPage: _currentNavIndex);
+    
+    if (widget.isGuest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda masuk dalam mode tamu. Data tidak akan disimpan.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
+    }
     // Inisialisasi scroll controllers
     _initScrollControllers();
   }
@@ -94,9 +108,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
           ],
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
-          // backgroundColor: Colors.white,
-      ),
-        );
+         ) );
       },
     );
   }
@@ -398,97 +410,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       default: return Colors.grey.shade200;
     }
   }
-  
-  // New methods for menu options
-  void _showStatistics() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('📊 Statistik Permainan'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Total Spin:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('$_spinCount 🔁', style: TextStyle(color: Colors.red.shade900)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Koin Dimainkan:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('${_spinCount * 50} 🪙', style: TextStyle(color: Colors.red.shade900)),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Rasio Kemenangan:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('${_calculateWinRate().toStringAsFixed(1)}%', style: TextStyle(color: Colors.red.shade900)),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                'ℹ️ Rasio kemenangan dihitung berdasarkan koin yang dimenangkan dibandingkan dengan total koin yang dimainkan',
-                style: TextStyle(fontSize: 12, color: Colors.red),
-                textAlign: TextAlign.center,
-              ),
-            )
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('TUTUP', style: TextStyle(color: Colors.red.shade900)),
-          ),
-        ],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
-    );
-  }
-
-  double _calculateWinRate() {
-    final totalCoinsPlayed = _spinCount * 50;
-    if (totalCoinsPlayed == 0) return 0.0;
-    final coinsWon = _coins - 500 + totalCoinsPlayed;
-    return (coinsWon / totalCoinsPlayed * 100).clamp(0, 100);
-  }
-
-  void _showSpinHistory() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('📜 Riwayat Spin Terakhir'),
-        content: const Text(
-          'Fitur ini akan menampilkan hasil spin sebelumnya dalam versi mendatang. '
-          'Kami berencana untuk menyimpan hingga 20 spin terakhir untuk analisis pola.',
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('TUTUP', style: TextStyle(color: Colors.red.shade900)),
-          ),
-        ],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
-    );
-  }
 
   void _showHelp() {
     showDialog(
@@ -551,98 +472,117 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     );
   }
 
-  void _showSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('⚙️ Pengaturan'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+  // Screen untuk Setting
+  Widget _buildSettingScreen() {
+    return Scaffold(
+      backgroundColor: Colors.grey[200],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Pengaturan akan tersedia pada versi berikutnya. '
-              'Fitur yang sedang dalam pengembangan:',
-              textAlign: TextAlign.center,
+            const Icon(Icons.settings, size: 80, color: Colors.red),
+            const SizedBox(height: 20),
+            Text(
+              'Pengaturan',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade900,
+              ),
             ),
-            const SizedBox(height: 15),
-            _buildSettingItem('Volume Efek Suara'),
-            _buildSettingItem('Animasi Mesin Slot'),
-            _buildSettingItem('Tema Warna'),
-            _buildSettingItem('Kecepatan Putaran'),
+            const SizedBox(height: 20),
+            const Text(
+              'Halaman pengaturan akan dikembangkan lebih lanjut',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18),
+            ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('TUTUP', style: TextStyle(color: Colors.red.shade900)),
-          ),
-        ],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );
   }
 
-  Widget _buildSettingItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          Icon(Icons.construction, color: Colors.orange.shade700, size: 20),
-          const SizedBox(width: 10),
-          Text(text),
-        ],
+  // Screen untuk Profile
+  Widget _buildProfileScreen() {
+    return Scaffold(
+      backgroundColor: Colors.grey[200],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircleAvatar(
+              radius: 60,
+              backgroundColor: Colors.red,
+              child: Icon(Icons.person, size: 80, color: Colors.white),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Profil Pengguna',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.red.shade900,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Halaman profil akan dikembangkan lebih lanjut',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _showAbout() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ℹ️ Tentang Aplikasi'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.casino, size: 60, color: Colors.red),
-            const SizedBox(height: 15),
-            const Text(
-              'Slot Machine Simulator',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  // Screen utama untuk permainan slot
+  Widget _buildSlotScreen() {
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Center(
+              child: _buildSlotMachine(),
             ),
-            const Text('Versi 1.0.0'),
-            const SizedBox(height: 15),
-            const Text(
-              'Aplikasi ini dibuat untuk tujuan edukasi tentang mekanisme permainan slot online dan algoritma yang digunakan',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 15),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                '🚫 PERINGATAN: \nJudi dilarang untuk anak di bawah umur dan dapat menyebabkan ketagihan',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.red),
-              ),
-            )
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('TUTUP', style: TextStyle(color: Colors.red.shade900)),
           ),
-        ],
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
         ),
-      ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.casino, size: 28),
+            label: const Text('PUTAR', 
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade800,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20)),
+              elevation: 5,
+            ),
+            onPressed: _isSpinning ? null : _spin,
+          ),
+        ),
+        Container(
+          color: Colors.red.shade50,
+          padding: const EdgeInsets.all(12),
+          child: const Text(
+            'SIMULASI INI MEMPERLIHATKAN BAGAIMANA ALGORITMA JUDI ONLINE BEKERJA\n'
+            'HANYA UNTUK EDUKASI - JANGAN COBA DI DUNIA NYATA',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.red, fontSize: 12),
+          ),
+        ),
+      ],
     );
+  }
+
+  void _handleNavTap(int index) {
+    setState(() {
+      _currentNavIndex = index;
+      _pageController.jumpToPage(index);
+    });
   }
 
   @override
@@ -651,153 +591,64 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       appBar: AppBar(
         title: const Text('SLOT MACHINE SIMULATOR'),
         backgroundColor: Colors.red.shade900,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Chip(
-              label: Text('$_coins 🪙', 
-                style: const TextStyle(color: Colors.white)),
-              backgroundColor: Colors.red.shade700,
-            ),
-          ),
+          // Tombol Cara Bermain di app bar
           IconButton(
-            icon: const Icon(Icons.restart_alt, color: Colors.white),
-            onPressed: _resetGame,
-            tooltip: 'Reset Game',
+            icon: const Icon(Icons.help_outline),
+            onPressed: _showHelp,
+            tooltip: 'Cara Bermain',
           ),
-        ],
-      ),
-      drawer: Drawer(
-        width: MediaQuery.of(context).size.width * 0.7,
-        backgroundColor: Colors.red.shade50,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.red.shade900,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'SLOT MACHINE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Saldo: $_coins 🪙',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                    ),
-                  ),
-                  Text(
-                    'Spin: $_spinCount 🔁',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+          // Tampilkan koin hanya di halaman utama
+          if (_currentNavIndex == 1) ...[
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Chip(
+                label: Text('$_coins 🪙', 
+                  style: const TextStyle(color: Colors.white)),
+                backgroundColor: Colors.red.shade700,
               ),
             ),
-            ListTile(
-              leading: const Icon(Icons.home, color: Colors.red),
-              title: const Text('Beranda'),
-              onTap: () {
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.leaderboard, color: Colors.red),
-              title: const Text('Statistik'),
-              onTap: () {
-                Navigator.pop(context);
-                _showStatistics();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history, color: Colors.red),
-              title: const Text('Riwayat Spin'),
-              onTap: () {
-                Navigator.pop(context);
-                _showSpinHistory();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.help, color: Colors.red),
-              title: const Text('Cara Bermain'),
-              onTap: () {
-                Navigator.pop(context);
-                _showHelp();
-              },
-            ),
-            const Divider(thickness: 1, color: Colors.red),
-            ListTile(
-              leading: const Icon(Icons.settings, color: Colors.red),
-              title: const Text('Pengaturan'),
-              onTap: () {
-                Navigator.pop(context);
-                _showSettings();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.info, color: Colors.red),
-              title: const Text('Tentang'),
-              onTap: () {
-                Navigator.pop(context);
-                _showAbout();
-              },
+            IconButton(
+              icon: const Icon(Icons.restart_alt, color: Colors.white),
+              onPressed: _resetGame,
+              tooltip: 'Reset Game',
             ),
           ],
-        ),
+        ],
       ),
-      body: Column(
+      body: PageView(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        onPageChanged: (index) {
+          setState(() {
+            _currentNavIndex = index;
+          });
+        },
         children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Center(
-                child: _buildSlotMachine(), // Gunakan widget baru ini
-              ),
-            ),
+          _buildSettingScreen(),    // Index 0
+          _buildSlotScreen(),       // Index 1 (Home)
+          _buildProfileScreen(),    // Index 2
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.red.shade900,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.grey.shade300,
+        currentIndex: _currentNavIndex,
+        onTap: _handleNavTap,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Setting',
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.casino, size: 28),
-              label: const Text('PUTAR', 
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade800,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-                elevation: 5,
-              ),
-              onPressed: _isSpinning ? null : _spin,
-            ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home, size: 32), // Lebih besar untuk menonjolkan
+            label: 'Home',
           ),
-          Container(
-            color: Colors.red.shade50,
-            padding: const EdgeInsets.all(12),
-            child: const Text(
-              'SIMULASI INI MEMPERLIHATKAN BAGAIMANA ALGORITMA JUDI ONLINE BEKERJA\n'
-              'HANYA UNTUK EDUKASI - JANGAN COBA DI DUNIA NYATA',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.red, fontSize: 12),
-            ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Profile',
           ),
         ],
       ),
@@ -812,6 +663,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         controller.dispose();
       }
     }
+    _pageController.dispose();
     super.dispose();
   }
 }
