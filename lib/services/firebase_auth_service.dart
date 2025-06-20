@@ -6,6 +6,13 @@ import 'package:flutter/material.dart';
 class FirebaseAuthService {
   FirebaseAuth auth = FirebaseAuth.instance;
 
+  Future<void> loginAsGuest() async {
+    try {
+      await FirebaseAuth.instance.signInAnonymously();
+    } catch (e) {
+      throw Exception("Gagal login sebagai tamu: $e");
+    }
+  }
   Future login(String email, String password) async {
     await auth.signInWithEmailAndPassword(email: email, password: password);
   }
@@ -27,4 +34,5 @@ class FirebaseAuthService {
 
     debugPrint(user.user?.displayName);
   }
+
 }

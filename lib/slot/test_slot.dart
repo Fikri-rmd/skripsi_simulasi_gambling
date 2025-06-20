@@ -3,8 +3,9 @@ import 'dart:math';
 import 'dart:async';
 
 class SlotGameScreen extends StatefulWidget {
-  const SlotGameScreen({super.key});
-
+  // const SlotGameScreen({super.key, required bool isGuest});
+  final bool isGuest;
+  const SlotGameScreen({super.key, this.isGuest = false});
   @override
   State<SlotGameScreen> createState() => _SlotGameScreenState();
 }
@@ -37,6 +38,17 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   void initState() {
     super.initState();
     
+    if (widget.isGuest) {
+      // Tampilkan pesan khusus untuk guest
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda masuk dalam mode tamu. Data tidak akan disimpan.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
+    }
     // Inisialisasi scroll controllers
     _initScrollControllers();
   }
