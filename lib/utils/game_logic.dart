@@ -72,6 +72,7 @@ class GameLogic {
       '🍇': 0.12,
     },
   );
+  
 
   // Update settings
   static void updateSettings(GameSettings newSettings) {
@@ -81,10 +82,13 @@ class GameLogic {
   // Get random symbol berdasarkan probabilitas
   static String getRandomSymbol() {
     // Hitung total weight
-    double totalWeight = settings.symbolRates.values.reduce((a, b) => a + b);
+    double totalWeight = settings.symbolRates.values.fold(0.0, (sum, weight) => sum + weight);
     
     double randomNumber = _random.nextDouble() * totalWeight;
     double cumulative = 0.0;
+    if (totalWeight <= 0) {
+      return '🎰'; // Simbol default
+    }
     
     for (var entry in settings.symbolRates.entries) {
       cumulative += entry.value;
@@ -92,8 +96,8 @@ class GameLogic {
         return entry.key;
       }
     }
-    
-    return settings.symbolRates.keys.first;
+    return '🎰'; 
+    // return settings.symbolRates.keys.first;
   }
 
   static List<List<String>> generateSymbols() {

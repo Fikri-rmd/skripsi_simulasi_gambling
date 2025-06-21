@@ -36,7 +36,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     return Scaffold(
       // Hapus AppBar dari sini
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -52,11 +52,11 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
             _buildSectionHeader('Persentase Kemenangan Umum'),
             _buildWinPercentageSetting(),
             
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             _buildSectionHeader('Jumlah Spin Minimum untuk Menang'),
             _buildSpinSetting(),
             
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             _buildSectionHeader('Persentase Kemenangan per Simbol'),
             ..._buildSymbolSettings(),
             
@@ -66,7 +66,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               child: Center(
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.save, size: 28),
-                  label: const Text('SIMPAN PENGATURAN', 
+                  label: const Text('SIMPAN', 
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red.shade900,
@@ -110,7 +110,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               value: _winPercentage,
               min: 0.0,
               max: 1.0,
-              divisions: 100,
+              divisions: 20,
               label: '${(_winPercentage * 100).toStringAsFixed(1)}%',
               onChanged: (value) {
                 setState(() {
@@ -168,26 +168,27 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
   List<Widget> _buildSymbolSettings() {
     return _symbolRates.entries.map((entry) {
       return Card(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 10),
         elevation: 4,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           child: Column(
             children: [
               Text(
                 entry.key,
-                style: const TextStyle(fontSize: 36),
+                style: const TextStyle(fontSize: 20),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 5),
               const Text(
                 'Probabilitas Muncul',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
               Slider(
+                activeColor: Colors.red,
                 value: entry.value,
                 min: 0.0,
                 max: 1.0,
-                divisions: 100,
+                divisions: 20,
                 label: '${(entry.value * 100).toStringAsFixed(1)}%',
                 onChanged: (value) {
                   setState(() {
@@ -195,14 +196,14 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
                   });
                 },
               ),
-              Text(
-                '${(entry.value * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              // Text(
+              //   '${(entry.value * 100).toStringAsFixed(1)}%',
+              //   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              // ),
               const SizedBox(height: 10),
               const Text(
                 '0% = tidak pernah muncul | 100% = selalu muncul',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: Colors.black),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -213,7 +214,19 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
   }
 
  Future <void> _saveSettings() async {
-    try{    // Buat objek settings baru
+    try {
+      double totalProbability = _symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
+    
+    if (totalProbability <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Total probabilitas tidak boleh 0%!'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }    // Buat objek settings baru
     final newSettings = GameSettings(
       winPercentage: _winPercentage,
       minSpinToWin: _minSpinToWin,
