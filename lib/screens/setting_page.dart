@@ -1,69 +1,61 @@
+import 'package:firebase_auth101/utils/game_logic.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth101/app_styles.dart';
-import 'package:firebase_auth101/size_config.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ProbabilitySettingsPage2 extends StatefulWidget {
-  const ProbabilitySettingsPage2({super.key});
+class ProbabilitySettingsPage extends StatefulWidget {
+  final double initialWinPercentage;
+  final int initialMinSpinToWin;
+  final Map<String, double> initialSymbolRates;
+
+  const ProbabilitySettingsPage({
+    Key? key,
+    required this.initialWinPercentage,
+    required this.initialMinSpinToWin,
+    required this.initialSymbolRates,
+  }) : super(key: key);
 
   @override
   _ProbabilitySettingsPageState createState() => _ProbabilitySettingsPageState();
 }
 
-class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage2> {
-  // 1. Persentase kemenangan umum
-  double _winPercentage = 0.5;
-  
-  // 2. Jumlah spin minimum untuk menang
-  int _minSpinToWin = 5;
-  
-  // 3. Persentase kemenangan per simbol
-  Map<String, double> _symbolWinRates = {
-    '🍒': 0.25,
-    '🍋': 0.20,
-    '💎': 0.15,
-    '💰': 0.10,
-    '🍊': 0.10,
-    '🔔': 0.08,
-    '🎲': 0.07,
-    '🥇': 0.03,
-    '🍇': 0.02,
-  };
+class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
+  late double _winPercentage;
+  late int _minSpinToWin;
+  late Map<String, double> _symbolRates;
+
+  @override
+  void initState() {
+    super.initState();
+    _winPercentage = widget.initialWinPercentage;
+    _minSpinToWin = widget.initialMinSpinToWin;
+    _symbolRates = Map<String, double>.from(widget.initialSymbolRates);
+  }
 
   @override
   Widget build(BuildContext context) {
-    SizeConfig().init(context);
-    
     return Scaffold(
       appBar: AppBar(
-        title: Text('Pengaturan Probabilitas',
-            style: kRalewayBold.copyWith(color: kWhite)),
-        backgroundColor: kBlue,
-        elevation: 0,
+        backgroundColor: Colors.red.shade900,
         actions: [
           IconButton(
-            icon: Icon(Icons.save, color: kWhite),
+            icon: const Icon(Icons.save),
             onPressed: _saveSettings,
           )
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(SizeConfig.blockSizeHorizontal! * 4),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. Pengaturan Persentase Kemenangan Umum
             _buildSectionHeader('Persentase Kemenangan Umum'),
             _buildWinPercentageSetting(),
             
-            SizedBox(height: SizeConfig.blockSizeVertical! * 3),
-            
-            // 2. Pengaturan Jumlah Spin Minimum untuk Menang
+            const SizedBox(height: 20),
             _buildSectionHeader('Jumlah Spin Minimum untuk Menang'),
             _buildSpinSetting(),
             
-            SizedBox(height: SizeConfig.blockSizeVertical! * 3),
-            
-            // 3. Pengaturan Persentase Kemenangan per Simbol
+            const SizedBox(height: 20),
             _buildSectionHeader('Persentase Kemenangan per Simbol'),
             ..._buildSymbolSettings(),
           ],
@@ -74,39 +66,43 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage2> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: SizeConfig.blockSizeVertical! * 1.5),
-      child: Text(title,
-          style: kRalewayBold.copyWith(
-              fontSize: SizeConfig.blockSizeHorizontal! * 4.5,
-              color: kBlue)),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.red,
+        ),
+      ),
     );
   }
 
-  // 1. Widget untuk pengaturan persentase kemenangan umum
   Widget _buildWinPercentageSetting() {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: EdgeInsets.all(SizeConfig.blockSizeHorizontal! * 4),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Slider(
               value: _winPercentage,
               min: 0.0,
               max: 1.0,
-              divisions: 20,
-              label: '${(_winPercentage * 100).toStringAsFixed(0)}%',
+              divisions: 100,
+              label: '${(_winPercentage * 100).toStringAsFixed(1)}%',
               onChanged: (value) {
                 setState(() {
                   _winPercentage = value;
                 });
               },
-              activeColor: kBlue,
+              activeColor: Colors.red,
             ),
+            Text('Peluang kemenangan per spin setelah mencapai spin minimum'),
+            SizedBox(height: 10),
             Text(
-              '${(_winPercentage * 100).toStringAsFixed(0)}% peluang kemenangan per spin',
-              style: kRalewayRegular,
+              '${(_winPercentage * 100).toStringAsFixed(0)}%',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -114,72 +110,86 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage2> {
     );
   }
 
-  // 2. Widget untuk pengaturan spin minimum
   Widget _buildSpinSetting() {
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: EdgeInsets.all(SizeConfig.blockSizeHorizontal! * 4),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Slider(
               value: _minSpinToWin.toDouble(),
               min: 1,
-              max: 20,
-              divisions: 19,
-              label: '$_minSpinToWin Spin',
+              max: 50,
+              divisions: 49,
+              label: '$_minSpinToWin',
               onChanged: (value) {
                 setState(() {
                   _minSpinToWin = value.toInt();
                 });
               },
-              activeColor: kBlue,
+              activeColor: Colors.red,
             ),
-            Text(
-              'Minimum $_minSpinToWin spin untuk mendapatkan kemenangan',
-              style: kRalewayRegular,
-            ),
+            Text('Jumlah spin minimum sebelum mulai mendapatkan kemenangan'),
+          SizedBox(height: 10),
+          Text(
+            '$_minSpinToWin Spin',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
           ],
         ),
       ),
     );
   }
 
-  // 3. Widget untuk pengaturan persentase per simbol
-  List<Widget> _buildSymbolSettings() {
-    return _symbolWinRates.entries.map((entry) {
+List<Widget> _buildSymbolSettings() {
+    return _symbolRates.entries.map((entry) {
       return Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        margin: EdgeInsets.only(bottom: SizeConfig.blockSizeVertical! * 2),
+        // ... desain sama ...
         child: Padding(
-          padding: EdgeInsets.all(SizeConfig.blockSizeHorizontal! * 4),
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${entry.key} : ${(entry.value * 100).toStringAsFixed(1)}%',
-                    style: kRalewayMedium.copyWith(fontSize: 18),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.tune),
-                    onPressed: () => _showSymbolSettingsDialog(entry.key),
-                  ),
-                ],
+              Text(
+                entry.key,
+                style: TextStyle(fontSize: 36),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'Probabilitas Muncul',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+              Slider(
+                value: entry.value,
+                min: 0.0,
+                max: 1.0,
+                divisions: 100,
+                label: '${(entry.value * 100).toStringAsFixed(1)}%',
+                onChanged: (value) {
+                  setState(() {
+                    _symbolRates[entry.key] = value;
+                  });
+                },
+              ),
+              Text(
+                '${(entry.value * 100).toStringAsFixed(1)}%',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 10),
+              Text(
+                '0% = tidak pernah muncul | 100% = selalu muncul',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
         ),
       );
     }).toList();
-  }
-
+}
   void _showSymbolSettingsDialog(String symbol) {
     TextEditingController controller = TextEditingController(
-      text: (_symbolWinRates[symbol]! * 100).toStringAsFixed(1),
+      text: (_symbolRates[symbol]! * 100).toStringAsFixed(1),
     );
 
     showDialog(
@@ -189,7 +199,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage2> {
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             suffixText: '%',
             border: OutlineInputBorder(),
           ),
@@ -197,63 +207,38 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage2> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Batal'),
+            child: const Text('Batal'),
           ),
           TextButton(
             onPressed: () {
               final value = double.tryParse(controller.text) ?? 0.0;
               if (value >= 0 && value <= 100) {
                 setState(() {
-                  _symbolWinRates[symbol] = value / 100;
+                  _symbolRates[symbol] = value / 100;
                 });
               }
               Navigator.pop(context);
             },
-            child: Text('Simpan'),
+            child: const Text('Simpan'),
           ),
         ],
       ),
     );
   }
 
-  void _saveSettings() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          icon: Icon(Icons.check_circle, color: Colors.green, size: 40),
-          title: Text(
-            'Berhasil Disimpan',
-            style: kRalewayBold.copyWith(
-              fontSize: SizeConfig.blockSizeHorizontal! * 4.5,
-              color: kBlue,
-            ),
-          ),
-          content: Text(
-            'Pengaturan probabilitas telah berhasil diperbarui',
-            style: kRalewayMedium.copyWith(
-              fontSize: SizeConfig.blockSizeHorizontal! * 4,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Mengerti',
-                style: kRalewayMedium.copyWith(
-                  color: kBlue,
-                  fontSize: SizeConfig.blockSizeHorizontal! * 4,
-                ),
-              ),
-            ),
-          ],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-        );
-      },
+  void _saveSettings() async {
+    // Buat objek settings baru
+    final newSettings = GameSettings(
+      winPercentage: _winPercentage,
+      minSpinToWin: _minSpinToWin,
+      symbolRates: _symbolRates,
     );
+    
+    // Simpan ke SharedPreferences
+    await newSettings.saveToPrefs();
+    
+    // Kembalikan ke halaman sebelumnya
+    Navigator.pop(context, newSettings);
   }
 }
+

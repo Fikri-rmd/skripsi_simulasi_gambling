@@ -1,14 +1,15 @@
 import 'dart:async';
 
+import 'package:firebase_auth101/dialogs/help_dialog.dart';
+import 'package:firebase_auth101/dialogs/reset_dialog.dart';
+import 'package:firebase_auth101/dialogs/win_loss_dialog.dart';
 import 'package:firebase_auth101/screens/profile_page.dart';
 import 'package:firebase_auth101/screens/setting_page.dart';
+import 'package:firebase_auth101/utils/game_logic.dart';
+import 'package:firebase_auth101/widgets/bottom_nav_bar.dart';
+import 'package:firebase_auth101/widgets/slot_machine.dart';
 import 'package:flutter/material.dart';
-import '../widgets/slot_machine.dart';
-import '../dialogs/help_dialog.dart';
-import '../dialogs/reset_dialog.dart';
-import '../dialogs/win_loss_dialog.dart';
-import '../widgets/bottom_nav_bar.dart';
-import '../utils/game_logic.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 class SlotGameScreen extends StatefulWidget {
@@ -43,6 +44,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       });
     }
     _initScrollControllers();
+    _loadSettings();
   }
 
   void _initScrollControllers() {
@@ -58,6 +60,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _scrollControllers.add(rowControllers);
       _isRolling.add(rowRolling);
     }
+  }
+
+  Future<void> _loadSettings() async {
+    final settings = await GameSettings.loadFromPrefs();
+    GameLogic.updateSettings(settings);
   }
 
   void _resetGame() {
@@ -104,10 +111,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   Future<void> _startRollingAnimation(int row, int col, String finalSymbol) async {
     setState(() => _isRolling[row][col] = true);
     
-    List<String> rollingSymbols = [];
-    for (int i = 0; i < 20; i++) {
-      rollingSymbols.add(GameLogic.getRandomSymbol());
-    }
+    List<String> rollingSymbols = List.generate(20, (_) => GameLogic.getRandomSymbol());
     rollingSymbols.add(finalSymbol);
     
     const double itemHeight = 70.0;
@@ -127,38 +131,54 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   }
 
   void _checkWin() {
-    Map<String, int> counts = {};
-    bool hasWon = false;
-    
-    for (var row in _rows) {
-      for (var symbol in row) {
-        counts[symbol] = (counts[symbol] ?? 0) + 1;
-      }
+  // Cek apakah spin ini memenuhi syarat untuk bisa menang
+  bool canWin = GameLogic.shouldWin(_spinCount);
+  
+  if (!canWin) {
+    String lossMessage = 'Spin minimum belum tercapai (${GameLogic.settings.minSpinToWin})\nSaldo: $_coins';
+    if (_spinCount % 5 == 0) {
+      lossMessage += '\n\nℹ️ Anda perlu ${GameLogic.settings.minSpinToWin} spin untuk mulai mendapatkan kemenangan';
     }
+    _showMessage(lossMessage, isWin: false);
+    return;
+  }
 
-    counts.forEach((symbol, count) {
-      int reward = GameLogic.calculateReward(symbol, count);
-      if (reward > 0) {
-        setState(() {
-          _coins += reward;
-          hasWon = true;
-        });
-        _showMessage(
-          'Kemenangan $symbol: $count+$reward Koin\n'
-          '💡 Kemenangan kecil untuk membuat Anda terus bermain',
-          isWin: true,
-        );
-      }
-    });
-
-    if (!hasWon) {
-      String lossMessage = 'Tidak ada kemenangan\nSaldo: $_coins';
-      if (_spinCount % 5 == 0) {
-        lossMessage += '\n\n💸 Fakta: 80% pemain kehilangan >60% saldo dalam 10 spin';
-      }
-      _showMessage(lossMessage, isWin: false);
+  // Hitung reward berdasarkan simbol yang muncul
+  Map<String, int> counts = {};
+  int totalReward = 0;
+  bool hasWon = false;
+  
+  for (var row in _rows) {
+    for (var symbol in row) {
+      counts[symbol] = (counts[symbol] ?? 0) + 1;
     }
   }
+
+  counts.forEach((symbol, count) {
+    int reward = GameLogic.calculateReward(symbol, count);
+    if (reward > 0) {
+      totalReward += reward;
+      hasWon = true;
+    }
+  });
+
+  if (hasWon) {
+    setState(() {
+      _coins += totalReward;
+    });
+    _showMessage(
+      'Kemenangan: +$totalReward Koin\n'
+      '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
+      isWin: true,
+    );
+  } else {
+    _showMessage(
+      'Tidak ada kombinasi pemenang\n'
+      '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
+      isWin: false,
+    );
+  }
+}
 
   void _showMessage(String message, {required bool isWin}) {
     showDialog(
@@ -182,6 +202,26 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _currentNavIndex = index;
       _pageController.jumpToPage(index);
     });
+  }
+
+  Future<void> _openSettings() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProbabilitySettingsPage(
+          initialWinPercentage: GameLogic.settings.winPercentage,
+          initialMinSpinToWin: GameLogic.settings.minSpinToWin,
+          initialSymbolRates: GameLogic.settings.symbolRates,
+        ),
+      ),
+    );
+
+    if (result != null) {
+      // Terapkan pengaturan baru
+      GameLogic.updateSettings(result);
+      // Simpan ke SharedPreferences
+      await result.saveToPrefs();
+    }
   }
 
   Widget _buildSlotScreen() {
@@ -256,6 +296,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
               tooltip: 'Reset Game',
             ),
           ],
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: _openSettings,
+            tooltip: 'Pengaturan',
+          ),
         ],
       ),
       body: PageView(
@@ -263,9 +308,13 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         physics: const NeverScrollableScrollPhysics(),
         onPageChanged: (index) => setState(() => _currentNavIndex = index),
         children: [
-          const ProbabilitySettingsPage2(),
+          ProbabilitySettingsPage(
+            initialWinPercentage: GameLogic.settings.winPercentage,
+            initialMinSpinToWin: GameLogic.settings.minSpinToWin,
+            initialSymbolRates: GameLogic.settings.symbolRates,
+          ),
           _buildSlotScreen(),
-          const ProfilePage(),
+          const ProfilePage()
         ],
       ),
       bottomNavigationBar: BottomNavBar(

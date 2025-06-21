@@ -1,37 +1,99 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class GameSettings {
+  double winPercentage;  // Persentase kemenangan umum
+  int minSpinToWin;      // Spin minimum untuk mulai memberikan kemenangan
+  Map<String, double> symbolRates; // Probabilitas munculnya simbol
+
+  GameSettings({
+    required this.winPercentage,
+    required this.minSpinToWin,
+    required this.symbolRates,
+  });
+
+  Future<void> saveToPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('winPercentage', winPercentage);
+    await prefs.setInt('minSpinToWin', minSpinToWin);
+    
+    // Simpan setiap simbol
+    for (var entry in symbolRates.entries) {
+      await prefs.setDouble('symbol_${entry.key}', entry.value);
+    }
+  }
+
+  static Future<GameSettings> loadFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    double winPercentage = prefs.getDouble('winPercentage') ?? 0.5;
+    int minSpinToWin = prefs.getInt('minSpinToWin') ?? 5;
+    
+    // Default rates
+    Map<String, double> defaultRates = {
+      '🍒': 0.30,
+      '🍋': 0.25,
+      '💎': 0.08,
+      '💰': 0.02,
+      '🍊': 0.10,
+      '🔔': 0.15,
+      '🎲': 0.05,
+      '🥇': 0.03,
+      '🍇': 0.12,
+    };
+    
+    Map<String, double> symbolRates = {};
+    for (String symbol in defaultRates.keys) {
+      symbolRates[symbol] = prefs.getDouble('symbol_$symbol') ?? defaultRates[symbol]!;
+    }
+    
+    return GameSettings(
+      winPercentage: winPercentage,
+      minSpinToWin: minSpinToWin,
+      symbolRates: symbolRates,
+    );
+  }
+}
 
 class GameLogic {
   static final Random _random = Random();
+  static GameSettings settings = GameSettings(
+    winPercentage: 0.5,
+    minSpinToWin: 5,
+    symbolRates: {
+      '🍒': 0.30,
+      '🍋': 0.25,
+      '💎': 0.08,
+      '💰': 0.02,
+      '🍊': 0.10,
+      '🔔': 0.15,
+      '🎲': 0.05,
+      '🥇': 0.03,
+      '🍇': 0.12,
+    },
+  );
 
-  static const List<Map<String, dynamic>> _symbolProbabilities = [
-    {'symbol': '🍒', 'weight': 30},
-    {'symbol': '🍊', 'weight': 10},
-    {'symbol': '🔔', 'weight': 15},
-    {'symbol': '🎲', 'weight': 5},
-    {'symbol': '🥇', 'weight': 3},
-    {'symbol': '🍇', 'weight': 12},
-    {'symbol': '🍋', 'weight': 25},
-    {'symbol': '💎', 'weight': 8},
-    {'symbol': '💰', 'weight': 2},
-  ];
+  // Update settings
+  static void updateSettings(GameSettings newSettings) {
+    settings = newSettings;
+  }
 
+  // Get random symbol berdasarkan probabilitas
   static String getRandomSymbol() {
-    final int totalWeight = _symbolProbabilities.fold(
-      0, (int sum, item) => sum + (item['weight'] as int)
-    );
+    // Hitung total weight
+    double totalWeight = settings.symbolRates.values.reduce((a, b) => a + b);
     
-    int randomNumber = _random.nextInt(totalWeight);
-    int cumulative = 0;
+    double randomNumber = _random.nextDouble() * totalWeight;
+    double cumulative = 0.0;
     
-    for (var item in _symbolProbabilities) {
-      cumulative += item['weight'] as int;
+    for (var entry in settings.symbolRates.entries) {
+      cumulative += entry.value;
       if (randomNumber < cumulative) {
-        return item['symbol'] as String;
+        return entry.key;
       }
     }
-    return '🎰';
+    
+    return settings.symbolRates.keys.first;
   }
 
   static List<List<String>> generateSymbols() {
@@ -40,19 +102,30 @@ class GameLogic {
     });
   }
 
+  // Hitung reward berdasarkan simbol yang muncul
   static int calculateReward(String symbol, int count) {
-    switch (symbol) {
-      case '🍒': return count >= 6 ? 1 : 0;
-      case '🍋': return count >= 5 ? 2 : 0;
-      case '💎': return count >= 4 ? 10 : 0;
-      case '💰': return count >= 3 ? 30 : 0;
-      case '🍊': return count >= 5 ? 3 : 0;
-      case '🔔': return count >= 5 ? 4 : 0;
-      case '🎲': return count >= 5 ? 5 : 0;
-      case '🥇': return count >= 5 ? 6 : 0;
-      case '🍇': return count >= 5 ? 7 : 0;
-      default: return 0;
-    }
+    // Fixed rewards, tidak terpengaruh pengaturan
+    Map<String, int> baseRewards = {
+      '🍒': 1,
+      '🍋': 2,
+      '💎': 10,
+      '💰': 30,
+      '🍊': 3,
+      '🔔': 4,
+      '🎲': 5,
+      '🥇': 6,
+      '🍇': 7,
+    };
+    
+    return baseRewards[symbol]! * count;
+  }
+
+  // Cek apakah spin ini menghasilkan kemenangan
+  static bool shouldWin(int spinCount) {
+    // Hanya berpeluang menang jika sudah mencapai spin minimum
+    if (spinCount < settings.minSpinToWin) return false;
+    
+    return _random.nextDouble() < settings.winPercentage;
   }
 
   static Color getSymbolColor(String symbol) {
