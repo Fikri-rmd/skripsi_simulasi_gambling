@@ -34,20 +34,21 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.red.shade900,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: _saveSettings,
-          )
-        ],
-      ),
+      // Hapus AppBar dari sini
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Tombol kembali di bagian atas
+            // Padding(
+            //   padding: const EdgeInsets.only(bottom: 20),
+            //   child: IconButton(
+            //     icon: const Icon(Icons.arrow_back, size: 30),
+            //     onPressed: () => Navigator.pop(context),
+            //   ),
+            // ),
+            
             _buildSectionHeader('Persentase Kemenangan Umum'),
             _buildWinPercentageSetting(),
             
@@ -58,6 +59,26 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
             const SizedBox(height: 20),
             _buildSectionHeader('Persentase Kemenangan per Simbol'),
             ..._buildSymbolSettings(),
+            
+            // Tombol simpan di bagian bawah
+            Padding(
+              padding: const EdgeInsets.only(top: 30, bottom: 20),
+              child: Center(
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.save, size: 28),
+                  label: const Text('SIMPAN PENGATURAN', 
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade900,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  ),
+                  onPressed: _saveSettings,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -98,11 +119,12 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               },
               activeColor: Colors.red,
             ),
-            Text('Peluang kemenangan per spin setelah mencapai spin minimum'),
-            SizedBox(height: 10),
+            const SizedBox(height: 8),
+            const Text('Peluang kemenangan per spin setelah mencapai spin minimum'),
+            const SizedBox(height: 10),
             Text(
               '${(_winPercentage * 100).toStringAsFixed(0)}%',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -130,32 +152,34 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               },
               activeColor: Colors.red,
             ),
-            Text('Jumlah spin minimum sebelum mulai mendapatkan kemenangan'),
-          SizedBox(height: 10),
-          Text(
-            '$_minSpinToWin Spin',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
+            const SizedBox(height: 8),
+            const Text('Jumlah spin minimum sebelum mulai mendapatkan kemenangan'),
+            const SizedBox(height: 10),
+            Text(
+              '$_minSpinToWin Spin',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
     );
   }
 
-List<Widget> _buildSymbolSettings() {
+  List<Widget> _buildSymbolSettings() {
     return _symbolRates.entries.map((entry) {
       return Card(
-        // ... desain sama ...
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 4,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               Text(
                 entry.key,
-                style: TextStyle(fontSize: 36),
+                style: const TextStyle(fontSize: 36),
               ),
-              SizedBox(height: 10),
-              Text(
+              const SizedBox(height: 10),
+              const Text(
                 'Probabilitas Muncul',
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
@@ -173,10 +197,10 @@ List<Widget> _buildSymbolSettings() {
               ),
               Text(
                 '${(entry.value * 100).toStringAsFixed(1)}%',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              SizedBox(height: 10),
-              Text(
+              const SizedBox(height: 10),
+              const Text(
                 '0% = tidak pernah muncul | 100% = selalu muncul',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
                 textAlign: TextAlign.center,
@@ -186,48 +210,10 @@ List<Widget> _buildSymbolSettings() {
         ),
       );
     }).toList();
-}
-  void _showSymbolSettingsDialog(String symbol) {
-    TextEditingController controller = TextEditingController(
-      text: (_symbolRates[symbol]! * 100).toStringAsFixed(1),
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Atur Persentase $symbol'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            suffixText: '%',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () {
-              final value = double.tryParse(controller.text) ?? 0.0;
-              if (value >= 0 && value <= 100) {
-                setState(() {
-                  _symbolRates[symbol] = value / 100;
-                });
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
-    );
   }
 
-  void _saveSettings() async {
-    // Buat objek settings baru
+ Future <void> _saveSettings() async {
+    try{    // Buat objek settings baru
     final newSettings = GameSettings(
       winPercentage: _winPercentage,
       minSpinToWin: _minSpinToWin,
@@ -236,9 +222,24 @@ List<Widget> _buildSymbolSettings() {
     
     // Simpan ke SharedPreferences
     await newSettings.saveToPrefs();
-    
+    GameLogic.updateSettings(newSettings);
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pengaturan berhasil disimpan!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    await Future.delayed(const Duration(milliseconds: 500));
+
     // Kembalikan ke halaman sebelumnya
-    Navigator.pop(context, newSettings);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan pengaturan: $e'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+    // Navigator.pop(context, newSettings);
   }
 }
-

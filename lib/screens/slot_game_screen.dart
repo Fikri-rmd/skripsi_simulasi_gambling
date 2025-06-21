@@ -83,10 +83,10 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   }
 
   Future<void> _spin() async {
-    if (_coins < 50 || _isSpinning) return;
+    if (_coins < 10 || _isSpinning) return;
 
     setState(() {
-      _coins -= 50;
+      _coins -= 10;
       _spinCount++;
       _isSpinning = true;
     });
@@ -205,24 +205,41 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   }
 
   Future<void> _openSettings() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProbabilitySettingsPage(
-          initialWinPercentage: GameLogic.settings.winPercentage,
-          initialMinSpinToWin: GameLogic.settings.minSpinToWin,
-          initialSymbolRates: GameLogic.settings.symbolRates,
-        ),
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ProbabilitySettingsPage(
+        initialWinPercentage: GameLogic.settings.winPercentage,
+        initialMinSpinToWin: GameLogic.settings.minSpinToWin,
+        initialSymbolRates: GameLogic.settings.symbolRates,
       ),
-    );
+    ),
+  );
+  
+  // Setelah kembali dari settings page, muat ulang pengaturan
+  final settings = await GameSettings.loadFromPrefs();
+  GameLogic.updateSettings(settings);
+}
 
-    if (result != null) {
-      // Terapkan pengaturan baru
-      GameLogic.updateSettings(result);
-      // Simpan ke SharedPreferences
-      await result.saveToPrefs();
-    }
-  }
+  // Future<void> _openSettings() async {
+  //   final result = await Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (context) => ProbabilitySettingsPage(
+  //         initialWinPercentage: GameLogic.settings.winPercentage,
+  //         initialMinSpinToWin: GameLogic.settings.minSpinToWin,
+  //         initialSymbolRates: GameLogic.settings.symbolRates,
+  //       ),
+  //     ),
+  //   );
+
+  //   if (result != null) {
+  //     // Terapkan pengaturan baru
+  //     GameLogic.updateSettings(result);
+  //     // Simpan ke SharedPreferences
+  //     await result.saveToPrefs();
+  //   }
+  // }
 
   Widget _buildSlotScreen() {
     return Column(
@@ -296,11 +313,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
               tooltip: 'Reset Game',
             ),
           ],
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: _openSettings,
-            tooltip: 'Pengaturan',
-          ),
+          // IconButton(
+          //   icon: const Icon(Icons.settings, color: Colors.white),
+          //   onPressed: _openSettings,
+          //   tooltip: 'Pengaturan',
+          // ),
         ],
       ),
       body: PageView(
