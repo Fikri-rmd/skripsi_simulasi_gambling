@@ -21,6 +21,8 @@ class SlotGameScreen extends StatefulWidget {
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
+  Map<String,int> _symbolCounts = {};
+  int _currentSpin = 0;
   List<List<String>> _rows = List.generate(4, (_) => List.filled(4, '🎰'));
   int _spinCount = 0;
   bool _isSpinning = false;
@@ -32,6 +34,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   @override
   void initState() {
     super.initState();
+    _resetSymbolCounts();
     _pageController = PageController(initialPage: _currentNavIndex);
     if (widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -45,6 +48,20 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     }
     _initScrollControllers();
     _loadSettings();
+  }
+  void _resetSymbolCounts() {
+    _symbolCounts = {
+      '🍒': 0,
+      '🍋': 0,
+      '💎': 0,
+      '💰': 0,
+      '🍊': 0,
+      '🔔': 0,
+      '🎲': 0,
+      '🥇': 0,
+      '🍇': 0,
+      '🎰': 0,
+    };
   }
 
   void _initScrollControllers() {
@@ -88,7 +105,9 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     setState(() {
       _coins -= 10;
       _spinCount++;
+      _currentSpin++;
       _isSpinning = true;
+      _resetSymbolCounts();
     });
     
     final newSymbols = GameLogic.generateSymbols();
@@ -132,8 +151,8 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
   void _checkWin() {
   // Cek apakah spin ini memenuhi syarat untuk bisa menang
-  bool canWin = GameLogic.shouldWin(_spinCount);
-  
+  // bool canWin = GameLogic.shouldWin(_spinCount);
+  bool canWin = _currentSpin >= GameLogic.settings.minSpinToWin;
   if (!canWin) {
     String lossMessage = 'Spin minimum belum tercapai (${GameLogic.settings.minSpinToWin})\nSaldo: $_coins';
     if (_spinCount % 5 == 0) {
@@ -141,6 +160,14 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     }
     _showMessage(lossMessage, isWin: false);
     return;
+  }
+
+  List<String> activeSymbols = [];
+  GameLogic.settings.symbolRates.forEach((symbol, rate) {
+    if (rate > 0) activeSymbols.add(symbol);
+  });
+  if (activeSymbols.length < 5) {
+    activeSymbols.addAll(['🍒', '🍋', '🍊','💎','💰']);
   }
 
   // Hitung reward berdasarkan simbol yang muncul
@@ -164,7 +191,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     { 'symbol': '🎲', 'count': 5, 'reward': 5 },
     { 'symbol': '🥇', 'count': 5, 'reward': 6 },
     { 'symbol': '🍇', 'count': 5, 'reward': 7 },
-  ];
+  ].where((combo) => activeSymbols.contains(combo['symbol'])).toList();
   for (var combo in winningCombinations) {
     final symbol = combo['symbol'] as String;
     final requiredCount = combo['count'] as int;
@@ -192,6 +219,21 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
       isWin: false,
     );
+  }
+  int? _getMaxCountForSymbol(String symbol) {
+    final Map<String, int> maxCounts = {
+      '🍒': 6,
+      '🍋': 5,
+      '💎': 4,
+      '💰': 3,
+      '🍊': 5,
+      '🔔': 5,
+      '🎲': 5,
+      '🥇': 5,
+      '🍇': 5,
+    };
+    
+    return maxCounts[symbol];
   }
   // counts.forEach((symbol, count) {
   //   int reward = GameLogic.calculateReward(symbol, count);

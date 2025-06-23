@@ -81,6 +81,17 @@ class GameLogic {
 
   // Get random symbol berdasarkan probabilitas
   static String getRandomSymbol() {
+    // Hanya gunakan simbol dengan persentase >0%
+    Map<String, double> activeSymbols = {};
+    settings.symbolRates.forEach((symbol, rate) {
+      if (rate > 0) {
+        activeSymbols[symbol] = rate;
+      }});
+      if (activeSymbols.length < 3) {
+      activeSymbols['🍒'] = 0.3;
+      activeSymbols['🍋'] = 0.3;
+      activeSymbols['🍊'] = 0.4;
+    }
     // Hitung total weight
     double totalWeight = settings.symbolRates.values.fold(0.0, (sum, weight) => sum + weight);
     
@@ -102,8 +113,51 @@ class GameLogic {
 
   static List<List<String>> generateSymbols() {
     return List.generate(4, (row) {
-      return List.generate(4, (col) => getRandomSymbol());
-    });
+      return List.generate(4, (col) {
+        String symbol;
+        int attempt = 0;
+        do{
+          symbol = getRandomSymbol();
+          attempt++;
+          // Batasi percobaan untuk menghindari loop tak berujung
+          if (attempt > 50) return '🎰'; 
+        } while(!_isSymbolAllowed(symbol));
+        return symbol;
+      }
+      // } => getRandomSymbol());
+   );});
+  }
+
+  static bool _isSymbolAllowed(String symbol) {
+    // Dapatkan batas maksimum untuk simbol ini
+    final maxCount = _getMaxCountForSymbol(symbol);
+    
+    // Jika tidak ada batas, selalu diizinkan
+    if (maxCount == null) return true;
+    
+    // Hitung berapa kali simbol ini sudah muncul di putaran saat ini
+    // CATATAN: Ini hanya contoh, implementasi sebenarnya perlu menyimpan state putaran saat ini
+    return true; // Implementasi nyata memerlukan state management
+    
+    // Di implementasi nyata, kita perlu:
+    // 1. Menyimpan jumlah kemunculan sementara untuk setiap simbol
+    // 2. Membandingkan dengan maxCount
+  }
+  static int? _getMaxCountForSymbol(String symbol) {
+    // Batas maksimum kemunculan berdasarkan kombinasi pemenang
+    final Map<String, int> maxCounts = {
+      '🍒': 6,
+      '🍋': 5,
+      '💎': 4,
+      '💰': 3,
+      '🍊': 5,
+      '🔔': 5,
+      '🎲': 5,
+      '🥇': 5,
+      '🍇': 5,
+    };
+    
+    return maxCounts[symbol];
   }
 
   // Hitung reward berdasarkan simbol yang muncul

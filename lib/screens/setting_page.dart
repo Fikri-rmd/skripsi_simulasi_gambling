@@ -216,7 +216,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
  Future <void> _saveSettings() async {
     try {
       double totalProbability = _symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
-    
+      int activeSymbolCount = _symbolRates.values.where((rate) => rate > 0).length;
     if (totalProbability <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -226,7 +226,19 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
         ),
       );
       return;
-    }    // Buat objek settings baru
+    } 
+    if (activeSymbolCount < 5){
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Minimal 5 simbol harus memiliki probabilitas > 0%!'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }  
+    
+     // Buat objek settings baru
     final newSettings = GameSettings(
       winPercentage: _winPercentage,
       minSpinToWin: _minSpinToWin,
