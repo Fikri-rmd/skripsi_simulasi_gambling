@@ -10,7 +10,7 @@ import 'package:firebase_auth101/widgets/bottom_nav_bar.dart';
 import 'package:firebase_auth101/widgets/slot_machine.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SlotGameScreen extends StatefulWidget {
   final bool isGuest;
@@ -21,6 +21,7 @@ class SlotGameScreen extends StatefulWidget {
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   Map<String,int> _symbolCounts = {};
   int _currentSpin = 0;
   List<List<String>> _rows = List.generate(4, (_) => List.filled(4, '🎰'));

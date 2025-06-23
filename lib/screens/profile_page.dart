@@ -1,5 +1,7 @@
+import 'package:firebase_auth101/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart'; 
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -11,7 +13,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final DateTime _joinDate = DateTime.now();
   bool _isEditing = false;
-  
+  final FirebaseAuth _auth = FirebaseAuth.instance; 
   // Data pengguna
   String _name = "John Doe";
   final String _email = "pengguna@contoh.com";
@@ -53,6 +55,19 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadUserData();
+  }
+  void _logout() async {
+    try {
+      await _auth.signOut();
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      print("Error logging out: $e");
+      _showErrorDialog('Logout gagal. Silakan coba lagi.');
+    }
   }
 
   void _showSuccessDialog() {
@@ -182,7 +197,7 @@ class _ProfilePageState extends State<ProfilePage> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Tutup dialog
-                Navigator.pop(context); // Kembali ke halaman sebelumnya
+                _logout();
                 // Di sini Anda bisa tambahkan logika logout sebenarnya
               },
               child: const Text(

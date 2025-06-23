@@ -87,10 +87,12 @@ class GameLogic {
       if (rate > 0) {
         activeSymbols[symbol] = rate;
       }});
-      if (activeSymbols.length < 3) {
+      if (activeSymbols.length < 5) {
       activeSymbols['🍒'] = 0.3;
       activeSymbols['🍋'] = 0.3;
       activeSymbols['🍊'] = 0.4;
+      activeSymbols['💎'] = 0.1;
+      activeSymbols['💰'] = 0.2;
     }
     // Hitung total weight
     double totalWeight = settings.symbolRates.values.fold(0.0, (sum, weight) => sum + weight);
