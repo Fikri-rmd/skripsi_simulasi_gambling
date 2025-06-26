@@ -7,7 +7,7 @@ class SlotRow extends StatelessWidget {
   final List<String> symbols;
   final List<ScrollController> scrollControllers;
   final List<bool> isRolling;
-  final List<WinLine> winLines;
+  // final List<WinLine> winLines;
 
   const SlotRow({
     super.key,
@@ -15,7 +15,7 @@ class SlotRow extends StatelessWidget {
     required this.symbols,
     required this.scrollControllers,
     required this.isRolling,
-    required this.winLines,
+    // required this.winLines,
   });
 
   @override
@@ -27,45 +27,45 @@ class SlotRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: symbols.asMap().entries.map((entry) {
           int colIndex = entry.key;
-          bool isWinning = _isInWinLine(rowIndex, colIndex);
+          // bool isWinning = _isInWinLine(rowIndex, colIndex);
           return SlotColumn(
             row: rowIndex,
             col: colIndex,
             finalSymbol: entry.value,
             isRolling: isRolling[colIndex],
             controller: scrollControllers[colIndex],
-            isWinningSymbol: isWinning,
+            // isWinningSymbol: isWinning,
           );
         }).toList(),
       ),
     );
   }
-  bool _isInWinLine(int row, int col) {
-    for (var line in winLines) {
-      switch (line.lineType) {
-        case 'horizontal':
-          if (line.row == row) {
-            return true;
-          }
-          break;
-        case 'vertical':
-          if (line.col == col) {
-            return true;
-          }
-          break;
-        case 'diagonal':
-          if (line.direction == 'down-right') {
-            if (row == col) {
-              return true;
-            }
-          } else if (line.direction == 'down-left') {
-            if (row + col == 3) {
-              return true;
-            }
-          }
-          break;
-      }
-    }
-    return false;
-  }
+  // bool _isInWinLine(int row, int col) {
+  //   for (var line in winLines) {
+  //     switch (line.lineType) {
+  //       case 'horizontal':
+  //         if (line.row == row) {
+  //           return true;
+  //         }
+  //         break;
+  //       case 'vertical':
+  //         if (line.col == col) {
+  //           return true;
+  //         }
+  //         break;
+  //       case 'diagonal':
+  //         if (line.direction == 'down-right') {
+  //           if (row == col) {
+  //             return true;
+  //           }
+  //         } else if (line.direction == 'down-left') {
+  //           if (row + col == 3) {
+  //             return true;
+  //           }
+  //         }
+  //         break;
+  //     }
+  //   }
+  //   return false;
+  // }
 }

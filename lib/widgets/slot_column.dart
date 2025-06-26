@@ -7,7 +7,7 @@ class SlotColumn extends StatelessWidget {
   final String finalSymbol;
   final bool isRolling;
   final ScrollController controller;
-  final bool isWinningSymbol;
+  // final bool isWinningSymbol;
 
   const SlotColumn({
     super.key,
@@ -16,7 +16,7 @@ class SlotColumn extends StatelessWidget {
     required this.finalSymbol,
     required this.isRolling,
     required this.controller,
-    required this.isWinningSymbol,
+    // required this.isWinningSymbol,
   });
 
   @override
@@ -49,30 +49,32 @@ class SlotColumn extends StatelessWidget {
               color: GameLogic.getSymbolColor(symbols[index]),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color : isWinningSymbol ? Colors.yellow : Colors.grey.shade400,
-                width: isWinningSymbol ? 3 : 2,
+                color : Colors.grey.shade400,
+                width: 2,
+                // color : isWinningSymbol ? Colors.yellow : Colors.grey.shade400,
+                // width: isWinningSymbol ? 3 : 2,
               ),
-            boxShadow: isWinningSymbol
-                ? [BoxShadow(
-                    color: Colors.yellow.withOpacity(0.5),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  )]
-                : null,
+            // boxShadow: isWinningSymbol
+            //     ? [BoxShadow(
+            //         color: Colors.yellow.withOpacity(0.5),
+            //         blurRadius: 10,
+            //         spreadRadius: 2,
+            //       )]
+            //     : null,
             ),
             
             child: Text(
               symbols[index],
               style: TextStyle(
               fontSize: 28,
-              shadows: isWinningSymbol
-                  ? [
-                      Shadow(
-                        color: Colors.black,
-                        blurRadius: 10,
-                        offset: const Offset(0, 0),),
-                    ]
-                  : null,
+              // shadows: isWinningSymbol
+              //     ? [
+              //         Shadow(
+              //           color: Colors.black,
+              //           blurRadius: 10,
+              //           offset: const Offset(0, 0),),
+              //       ]
+              //     : null,
               ),
             ),
           );

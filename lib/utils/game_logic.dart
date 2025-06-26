@@ -113,80 +113,147 @@ class GameLogic {
       '🥇': 6,
       '🍇': 7,
     };
-    for (int row = 0; row < grid.length; row++) {
+    // Cek garis horizontal
+    for (int row = 0; row < 4; row++) {
       String symbol = grid[row][0];
-      if (symbol != '🎰' && 
-          symbol == grid[row][1] && 
-          symbol == grid[row][2] && 
-          symbol == grid[row][3]) {
-        
-        int reward = baseRewards[symbol]! * 4;
+      bool win = true;
+      for (int col = 1; col < 4; col++) {
+        if (grid[row][col] != symbol) {
+          win = false;
+          break;
+        }
+      }
+      if (win && symbol != '🎰') {
         winLines.add(WinLine(
           lineType: 'horizontal',
           row: row,
-          startCol: 0,
-          endCol: 3,
           symbol: symbol,
-          reward: reward,
+          reward: baseRewards[symbol]! * 4,
         ));
       }
     }
-    // Cek garis vertikal (4 simbol)
-    for (int col = 0; col < grid[0].length; col++) {
-      String symbol = grid[0][col];
-      if (symbol != '🎰' && 
-          symbol == grid[1][col] && 
-          symbol == grid[2][col] && 
-          symbol == grid[3][col]) {
+    // for (int row = 0; row < grid.length; row++) {
+    //   String symbol = grid[row][0];
+    //   if (symbol != '🎰' && 
+    //       symbol == grid[row][1] && 
+    //       symbol == grid[row][2] && 
+    //       symbol == grid[row][3]) {
         
-        int reward = baseRewards[symbol]! * 4;
+    //     int reward = baseRewards[symbol]! * 4;
+    //     winLines.add(WinLine(
+    //       lineType: 'horizontal',
+    //       row: row,
+    //       startCol: 0,
+    //       endCol: 3,
+    //       symbol: symbol,
+    //       reward: reward,
+    //     ));
+    //   }
+    // }
+    // Cek garis vertikal (4 simbol)
+    for (int col = 0; col < 4; col++) {
+      String symbol = grid[0][col];
+      bool win = true;
+      for (int row = 1; row < 4; row++) {
+        if (grid[row][col] != symbol) {
+          win = false;
+          break;
+        }
+      }
+      if (win && symbol != '🎰') {
         winLines.add(WinLine(
           lineType: 'vertical',
           col: col,
-          startRow: 0,
-          endRow: 3,
           symbol: symbol,
-          reward: reward,
+          reward: baseRewards[symbol]! * 4,
         ));
       }
     }
+    // for (int col = 0; col < grid[0].length; col++) {
+    //   String symbol = grid[0][col];
+    //   if (symbol != '🎰' && 
+    //       symbol == grid[1][col] && 
+    //       symbol == grid[2][col] && 
+    //       symbol == grid[3][col]) {
+        
+    //     int reward = baseRewards[symbol]! * 4;
+    //     winLines.add(WinLine(
+    //       lineType: 'vertical',
+    //       col: col,
+    //       startRow: 0,
+    //       endRow: 3,
+    //       symbol: symbol,
+    //       reward: reward,
+    //     ));
+    //   }
+    // }
     // Cek diagonal utama (kiri atas ke kanan bawah - 4 simbol)
-    String mainDiagSymbol = grid[0][0];
-    if (mainDiagSymbol != '🎰' && 
-        mainDiagSymbol == grid[1][1] && 
-        mainDiagSymbol == grid[2][2] && 
-        mainDiagSymbol == grid[3][3]) {
+    // String mainDiagSymbol = grid[0][0];
+    // if (mainDiagSymbol != '🎰' && 
+    //     mainDiagSymbol == grid[1][1] && 
+    //     mainDiagSymbol == grid[2][2] && 
+    //     mainDiagSymbol == grid[3][3]) {
       
-      int reward = baseRewards[mainDiagSymbol]! * 4;
+    //   int reward = baseRewards[mainDiagSymbol]! * 4;
+    //   winLines.add(WinLine(
+    //     lineType: 'diagonal',
+    //     direction: 'down-right',
+    //     startRow: 0,
+    //     startCol: 0,
+    //     endRow: 3,
+    //     endCol: 3,
+    //     symbol: mainDiagSymbol,
+    //     reward: reward,
+    //   ));
+    // }
+    // Cek diagonal utama (kiri atas ke kanan bawah)
+    String mainDiagSymbol = grid[0][0];
+    bool mainDiagWin = true;
+    for (int i = 1; i < 4; i++) {
+      if (grid[i][i] != mainDiagSymbol) {
+        mainDiagWin = false;
+        break;
+      }
+    }
+    if (mainDiagWin && mainDiagSymbol != '🎰') {
       winLines.add(WinLine(
         lineType: 'diagonal',
-        direction: 'down-right',
-        startRow: 0,
-        startCol: 0,
-        endRow: 3,
-        endCol: 3,
         symbol: mainDiagSymbol,
-        reward: reward,
+        reward: baseRewards[mainDiagSymbol]! * 4,
       ));
     }
-     // Cek diagonal sekunder (kanan atas ke kiri bawah - 4 simbol)
-    String antiDiagSymbol = grid[0][3];
-    if (antiDiagSymbol != '🎰' && 
-        antiDiagSymbol == grid[1][2] && 
-        antiDiagSymbol == grid[2][1] && 
-        antiDiagSymbol == grid[3][0]) {
+    //  // Cek diagonal sekunder (kanan atas ke kiri bawah - 4 simbol)
+    // String antiDiagSymbol = grid[0][3];
+    // if (antiDiagSymbol != '🎰' && 
+    //     antiDiagSymbol == grid[1][2] && 
+    //     antiDiagSymbol == grid[2][1] && 
+    //     antiDiagSymbol == grid[3][0]) {
       
-    int reward = baseRewards[antiDiagSymbol]! * 4;
-    winLines.add(WinLine(
-      lineType: 'diagonal',
-      direction: 'down-left',
-      startRow: 0,
-      startCol: 3,
-      endRow: 3,
-      endCol: 0,
-      symbol: antiDiagSymbol,
-      reward: reward,
-    ));
+    // int reward = baseRewards[antiDiagSymbol]! * 4;
+    // winLines.add(WinLine(
+    //   lineType: 'diagonal',
+    //   direction: 'down-left',
+    //   startRow: 0,
+    //   startCol: 3,
+    //   endRow: 3,
+    //   endCol: 0,
+    //   symbol: antiDiagSymbol,
+    //   reward: reward,
+    // Cek diagonal sekunder (kanan atas ke kiri bawah)
+    String antiDiagSymbol = grid[0][3];
+    bool antiDiagWin = true;
+    for (int i = 1; i < 4; i++) {
+      if (grid[i][3-i] != antiDiagSymbol) {
+        antiDiagWin = false;
+        break;
+      }
+    }
+    if (antiDiagWin && antiDiagSymbol != '🎰') {
+      winLines.add(WinLine(
+        lineType: 'diagonal',
+        symbol: antiDiagSymbol,
+        reward: baseRewards[antiDiagSymbol]! * 4,
+      ));
         }return winLines;}
   
 

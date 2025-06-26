@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:firebase_auth101/dialogs/help_dialog.dart';
 import 'package:firebase_auth101/dialogs/reset_dialog.dart';
@@ -110,6 +111,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _currentSpin++;
       _isSpinning = true;
       _resetSymbolCounts();
+      _winLines = []; 
     });
     
     final newSymbols = GameLogic.generateSymbols();
@@ -166,6 +168,27 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   // Cek garis-garis yang menang (4 simbol)
     _winLines = GameLogic.checkWinLines(_rows);
     int totalReward = 0;
+    bool forceWin = GameLogic.settings.winPercentage == 1.0;
+    // Jika winPercentage 100% dan tidak ada garis menang alami, buat garis menang paksa
+  if (forceWin && _winLines.isEmpty) {
+    // Pilih simbol acak yang aktif
+    List<String> activeSymbols = [];
+    GameLogic.settings.symbolRates.forEach((symbol, rate) {
+      if (rate > 0) activeSymbols.add(symbol);
+    });
+    
+    if (activeSymbols.isNotEmpty) {
+      String winSymbol = activeSymbols[Random().nextInt(activeSymbols.length)];
+      
+      // Buat garis horizontal pertama menang
+      for (int col = 0; col < 4; col++) {
+        _rows[0][col] = winSymbol;
+      }
+      
+      // Hitung ulang winLines dengan pola baru
+      _winLines = GameLogic.checkWinLines(_rows);
+    }}
+    
      if (_winLines.isNotEmpty) {
       for (var line in _winLines) {
         totalReward += line.reward;
