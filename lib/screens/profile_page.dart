@@ -1,4 +1,4 @@
-import 'package:firebase_auth101/screens/login_screen.dart';
+import 'package:simulasi_slot/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart'; 

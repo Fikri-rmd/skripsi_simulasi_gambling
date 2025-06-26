@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_auth101/firebase_options.dart';
-import 'package:firebase_auth101/screens/login_screen.dart';
-import 'package:firebase_auth101/screens/onboarding_screen.dart';
-import 'package:firebase_auth101/screens/slot_game_screen.dart';
-import 'package:firebase_auth101/utils/game_logic.dart';
+import 'package:simulasi_slot/firebase_options.dart';
+import 'package:simulasi_slot/screens/login_screen.dart';
+import 'package:simulasi_slot/screens/onboarding_screen.dart';
+import 'package:simulasi_slot/screens/slot_game_screen.dart';
+import 'package:simulasi_slot/utils/game_logic.dart';
 // import 'package:firebase_auth101/test_slot.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';

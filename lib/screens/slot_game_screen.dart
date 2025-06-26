@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:firebase_auth101/dialogs/help_dialog.dart';
-import 'package:firebase_auth101/dialogs/reset_dialog.dart';
-import 'package:firebase_auth101/dialogs/win_loss_dialog.dart';
-import 'package:firebase_auth101/screens/profile_page.dart';
-import 'package:firebase_auth101/screens/setting_page.dart';
-import 'package:firebase_auth101/utils/game_logic.dart';
-import 'package:firebase_auth101/widgets/bottom_nav_bar.dart';
-import 'package:firebase_auth101/widgets/slot_machine.dart';
+import 'package:simulasi_slot/dialogs/help_dialog.dart';
+import 'package:simulasi_slot/dialogs/reset_dialog.dart';
+import 'package:simulasi_slot/dialogs/win_loss_dialog.dart';
+import 'package:simulasi_slot/screens/profile_page.dart';
+import 'package:simulasi_slot/screens/setting_page.dart';
+import 'package:simulasi_slot/utils/game_logic.dart';
+import 'package:simulasi_slot/widgets/bottom_nav_bar.dart';
+import 'package:simulasi_slot/widgets/slot_machine.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

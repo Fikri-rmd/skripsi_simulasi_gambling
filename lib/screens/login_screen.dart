@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_auth101/screens/slot_game_screen.dart';
+import 'package:simulasi_slot/screens/slot_game_screen.dart';
 // import 'package:firebase_auth101/test_slot.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';

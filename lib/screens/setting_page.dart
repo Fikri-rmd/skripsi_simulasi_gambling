@@ -1,4 +1,4 @@
-import 'package:firebase_auth101/utils/game_logic.dart';
+import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

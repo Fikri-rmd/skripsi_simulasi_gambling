@@ -1,5 +1,5 @@
 // onboarding_screen.dart
-import 'package:firebase_auth101/screens/login_screen.dart';
+import 'package:simulasi_slot/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:firebase_auth101/screens/welcome_screen.dart'; // Adjust import path
