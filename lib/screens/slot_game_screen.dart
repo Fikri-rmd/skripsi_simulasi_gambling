@@ -21,6 +21,7 @@ class SlotGameScreen extends StatefulWidget {
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
+  List<WinLine> _winLines = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   Map<String,int> _symbolCounts = {};
   int _currentSpin = 0;
@@ -162,80 +163,184 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     _showMessage(lossMessage, isWin: false);
     return;
   }
+  // Cek garis-garis yang menang (4 simbol)
+    _winLines = GameLogic.checkWinLines(_rows);
+    int totalReward = 0;
+     if (_winLines.isNotEmpty) {
+      for (var line in _winLines) {
+        totalReward += line.reward;
+      }
+     setState(() {
+        _coins += totalReward;
+      });
+      // Format detail kemenangan
+      String details = _winLines.map((line) {
+        String position = "";
+        switch (line.lineType) {
+          case 'horizontal':
+            position = "Baris ${line.row! + 1} kolom 1-4";
+            break;
+          case 'vertical':
+            position = "Kolom ${line.col! + 1} baris 1-4";
+            break;
+          case 'diagonal':
+            position = "Diagonal ${line.direction == 'down-right' ? 'kiri-kanan' : 'kanan-kiri'}";
+            break;
+        }
+        return "4x ${line.symbol} ($position) → +${line.reward}";
+      }).join("\n");
+      _showMessage(
+        "Kemenangan: +$totalReward Koin\n$details",
+        isWin: true,
+      );
+    } else {
+      _showMessage(
+        'Tidak ada garis menang\n'
+        '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
+        isWin: false,
+      );
+    }
+  // Cek kemenangan segaris (horizontal, vertikal, diagonal)
+  // String? winningSymbol;
+  // // Horizontal
+  // for (int i = 0; i < 4; i++) {
+  //   if (_rows[i].every((s) => s == _rows[i][0])) {
+  //     winningSymbol = _rows[i][0];
+  //     break;
+  //   }
+  // }
+  //   // Vertikal
+  // if (winningSymbol == null) {
+  //   for (int j = 0; j < 4; j++) {
+  //     String symbol = _rows[0][j];
+  //     bool allSame = true;
+  //     for (int i = 1; i < 4; i++) {
+  //       if (_rows[i][j] != symbol) {
+  //         allSame = false;
+  //         break;
+  //       }
+  //     }
+  //     if (allSame) {
+  //       winningSymbol = symbol;
+  //       break;
+  //     }
+  //   }
+  // }
+  // // Diagonal kanan atas ke kiri bawah
+  // if (winningSymbol == null) {
+  //   String symbol = _rows[0][3];
+  //   bool allSame = true;
+  //   for (int i = 1; i < 4; i++) {
+  //     if (_rows[i][3 - i] != symbol) {
+  //       allSame = false;
+  //       break;
+  //     }
+  //   }
+  //   if (allSame) winningSymbol = symbol;
+  // }
+  // if (winningSymbol != null && winningSymbol != '🎰') {
+  //   // Dapatkan reward sesuai simbol
+  //   int reward = GameLogic.calculateReward(winningSymbol, 4);
+  //   setState(() {
+  //     _coins += reward;
+  //   });
+  //   _showMessage(
+  //     'Kemenangan: $winningSymbol segaris!\n+${reward} Koin',
+  //     isWin: true,
+  //   );
+  // } else {
+  //   _showMessage(
+  //     'Tidak ada kombinasi segaris\n'
+  //     '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
+  //     isWin: false,
+  //   );
+  // }
+  
+  // if (winningSymbol == null) {
+  //   String symbol = _rows[0][0];
+  //   bool allSame = true;
+  //   for (int i = 1; i < 4; i++) {
+  //     if (_rows[i][i] != symbol) {
+  //       allSame = false;
+  //       break;
+  //     }
+  //   }
+  //   if (allSame) winningSymbol = symbol;
+  // }
 
-  List<String> activeSymbols = [];
-  GameLogic.settings.symbolRates.forEach((symbol, rate) {
-    if (rate > 0) activeSymbols.add(symbol);
-  });
-  if (activeSymbols.length < 5) {
-    activeSymbols.addAll(['🍒', '🍋', '🍊','💎','💰']);
-  }
+  // List<String> activeSymbols = [];
+  // GameLogic.settings.symbolRates.forEach((symbol, rate) {
+  //   if (rate > 0) activeSymbols.add(symbol);
+  // });
+  // if (activeSymbols.length < 5) {
+  //   activeSymbols.addAll(['🍒', '🍋', '🍊','💎','💰']);
+  // }
 
   // Hitung reward berdasarkan simbol yang muncul
-  Map<String, int> counts = {};
-  int totalReward = 0;
-  bool hasWinningCombination = false;
+  // Map<String, int> counts = {};
+  // // int totalReward = 0;
+  // bool hasWinningCombination = false;
   
-  for (var row in _rows) {
-    for (var symbol in row) {
-      counts[symbol] = (counts[symbol] ?? 0) + 1;
-    }
-  }
+  // for (var row in _rows) {
+  //   for (var symbol in row) {
+  //     counts[symbol] = (counts[symbol] ?? 0) + 1;
+  //   }
+  // }
 
-  final winningCombinations = [
-    { 'symbol': '🍒', 'count': 6, 'reward': 1 },
-    { 'symbol': '🍋', 'count': 5, 'reward': 2 },
-    { 'symbol': '💎', 'count': 4, 'reward': 10 },
-    { 'symbol': '💰', 'count': 3, 'reward': 30 },
-    { 'symbol': '🍊', 'count': 5, 'reward': 3 },
-    { 'symbol': '🔔', 'count': 5, 'reward': 4 },
-    { 'symbol': '🎲', 'count': 5, 'reward': 5 },
-    { 'symbol': '🥇', 'count': 5, 'reward': 6 },
-    { 'symbol': '🍇', 'count': 5, 'reward': 7 },
-  ].where((combo) => activeSymbols.contains(combo['symbol'])).toList();
-  for (var combo in winningCombinations) {
-    final symbol = combo['symbol'] as String;
-    final requiredCount = combo['count'] as int;
-    final rewardValue = combo['reward'] as int;
+  // final winningCombinations = [
+  //   { 'symbol': '🍒', 'count': 6, 'reward': 1 },
+  //   { 'symbol': '🍋', 'count': 5, 'reward': 2 },
+  //   { 'symbol': '💎', 'count': 4, 'reward': 10 },
+  //   { 'symbol': '💰', 'count': 3, 'reward': 30 },
+  //   { 'symbol': '🍊', 'count': 5, 'reward': 3 },
+  //   { 'symbol': '🔔', 'count': 5, 'reward': 4 },
+  //   { 'symbol': '🎲', 'count': 5, 'reward': 5 },
+  //   { 'symbol': '🥇', 'count': 5, 'reward': 6 },
+  //   { 'symbol': '🍇', 'count': 5, 'reward': 7 },
+  // ].where((combo) => activeSymbols.contains(combo['symbol'])).toList();
+  // for (var combo in winningCombinations) {
+  //   final symbol = combo['symbol'] as String;
+  //   final requiredCount = combo['count'] as int;
+  //   final rewardValue = combo['reward'] as int;
     
-    if ((counts[symbol] ?? 0) >= requiredCount) {
-      totalReward += rewardValue;
-      hasWinningCombination = true;
-    }
-  }
+  //   if ((counts[symbol] ?? 0) >= requiredCount) {
+  //     totalReward += rewardValue;
+  //     hasWinningCombination = true;
+  //   }
+  // }
    // Jika ada kombinasi pemenang
-  if (hasWinningCombination) {
-    setState(() {
-      _coins += totalReward;
-    });
-    _showMessage(
-      'Kemenangan: +$totalReward Koin\n'
-      '🎲 Kombinasi simbol berhasil!',
-      isWin: true,
-    );
-  } else {
-    // Meskipun persentase kemenangan terpenuhi, tapi tidak ada kombinasi
-    _showMessage(
-      'Tidak ada kombinasi pemenang\n'
-      '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
-      isWin: false,
-    );
-  }
-  int? _getMaxCountForSymbol(String symbol) {
-    final Map<String, int> maxCounts = {
-      '🍒': 6,
-      '🍋': 5,
-      '💎': 4,
-      '💰': 3,
-      '🍊': 5,
-      '🔔': 5,
-      '🎲': 5,
-      '🥇': 5,
-      '🍇': 5,
-    };
+  // if (hasWinningCombination) {
+  //   setState(() {
+  //     _coins += totalReward;
+  //   });
+  //   _showMessage(
+  //     'Kemenangan: +$totalReward Koin\n'
+  //     '🎲 Kombinasi simbol berhasil!',
+  //     isWin: true,
+  //   );
+  // } else {
+  //   // Meskipun persentase kemenangan terpenuhi, tapi tidak ada kombinasi
+  //   _showMessage(
+  //     'Tidak ada kombinasi pemenang\n'
+  //     '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
+  //     isWin: false,
+  //   );
+  // }
+  // int? _getMaxCountForSymbol(String symbol) {
+  //   final Map<String, int> maxCounts = {
+  //     '🍒': 6,
+  //     '🍋': 5,
+  //     '💎': 4,
+  //     '💰': 3,
+  //     '🍊': 5,
+  //     '🔔': 5,
+  //     '🎲': 5,
+  //     '🥇': 5,
+  //     '🍇': 5,
+  //   };
     
-    return maxCounts[symbol];
-  }
+  //   return maxCounts[symbol];
+  // }
   // counts.forEach((symbol, count) {
   //   int reward = GameLogic.calculateReward(symbol, count);
   //   if (symbol == '🍒' && count >= 6) reward = 1;
@@ -343,6 +448,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
                 rows: _rows,
                 scrollControllers: _scrollControllers,
                 isRolling: _isRolling,
+                winLines: _winLines,
               ),
             ),
           ),
