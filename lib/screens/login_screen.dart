@@ -163,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                               onPressed: () async {
-                                await FirebaseAuthService().logininwithgoogle();
+                                await FirebaseAuthService().signInWithGoogle();
                                 if (FirebaseAuth.instance.currentUser != null && mounted) {
                                   Navigator.pushReplacement(
                                     context,

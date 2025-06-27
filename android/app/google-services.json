@@ -12,7 +12,20 @@
           "package_name": "com.example.judi2"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "68495983151-f9u1h8fp77s0shgdv793antcerb6bi6c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.judi2",
+            "certificate_hash": "f9b353ada54e4682dd27873fbe998f338a870edf"
+          }
+        },
+        {
+          "client_id": "68495983151-d7usv6okc32palp4fru1517gjt237t0l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA5Ddmf-NyUXVRIHi2xTkdLRJqmi_aiSHE"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "68495983151-d7usv6okc32palp4fru1517gjt237t0l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
