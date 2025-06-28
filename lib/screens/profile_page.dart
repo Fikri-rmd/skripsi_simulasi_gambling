@@ -14,7 +14,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  bool _isLoadingHistory = true;
+  // bool _isLoadingHistory = true;
   bool _isEditing = false;
 
   // Data pengguna
@@ -22,7 +22,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String _email = '';
   String? _photoURL;
   DateTime? _lastLogin;
-  List<Map<String, dynamic>> _gameHistory = [];
+  // List<Map<String, dynamic>> _gameHistory = [];
 
   // Controller untuk form
   final TextEditingController _nameController = TextEditingController();
@@ -31,7 +31,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadUserData();
-    _loadGameHistory();
+    // _loadGameHistory();
   }
 
   Future<void> _loadUserData() async {
@@ -47,37 +47,52 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _loadGameHistory() async {
+  // Future<void> _loadGameHistory() async {
+  //   User? user = _auth.currentUser;
+  //   if (user == null) return;
+
+  //   try {
+  //     QuerySnapshot snapshot = await _firestore
+  //         .collection('users')
+  //         .doc(user.uid)
+  //         .collection('gameHistory')
+  //         .orderBy('date', descending: true)
+  //         .limit(10)
+  //         .get();
+
+  //     setState(() {
+  //       _gameHistory = snapshot.docs.map((doc) {
+  //         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  //         return {
+  //           'result': data['result'],
+  //           'amount': data['amount'],
+  //           'date': (data['date'] as Timestamp).toDate(),
+  //           'details': data['details'],
+  //         };
+  //       }).toList();
+  //       _isLoadingHistory = false;
+  //     });
+  //   } catch (e) {
+  //     print("Error loading game history: $e");
+  //     setState(() {
+  //       _isLoadingHistory = false;
+  //     });
+  //   }
+  // }
+
+  Stream<QuerySnapshot> _getGameHistoryStream() {
     User? user = _auth.currentUser;
-    if (user == null) return;
-
-    try {
-      QuerySnapshot snapshot = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .collection('gameHistory')
-          .orderBy('date', descending: true)
-          .limit(10)
-          .get();
-
-      setState(() {
-        _gameHistory = snapshot.docs.map((doc) {
-          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-          return {
-            'result': data['result'],
-            'amount': data['amount'],
-            'date': (data['date'] as Timestamp).toDate(),
-            'details': data['details'],
-          };
-        }).toList();
-        _isLoadingHistory = false;
-      });
-    } catch (e) {
-      print("Error loading game history: $e");
-      setState(() {
-        _isLoadingHistory = false;
-      });
+    if (user == null) {
+      return const Stream.empty();
     }
+    
+    return _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('gameHistory')
+        .orderBy('date', descending: true)
+        .limit(10)
+        .snapshots();
   }
 
   void _logout() async {
@@ -285,24 +300,46 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
+             // Gunakan StreamBuilder untuk real-time update
             Container(
-            height: 300, // Tinggi tetap 300 pixel
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(8),
+              height: 300,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _getGameHistoryStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('Belum ada riwayat permainan'));
+                  }
+                  
+                  final historyList = snapshot.data!.docs;
+                  
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: historyList.length,
+                    itemBuilder: (context, index) {
+                      final history = historyList[index].data() as Map<String, dynamic>;
+                      return _buildHistoryItem({
+                        'result': history['result'],
+                        'amount': history['amount'],
+                        'date': (history['date'] as Timestamp).toDate(),
+                        'details': history['details'],
+                      });
+                    },
+                  );
+                },
+              ),
             ),
-            child: _isLoadingHistory
-                ? const Center(child: CircularProgressIndicator())
-                : _gameHistory.isEmpty
-                    ? const Center(child: Text('Belum ada riwayat permainan'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(8),
-                        itemCount: _gameHistory.length,
-                        itemBuilder: (context, index) {
-                          return _buildHistoryItem(_gameHistory[index]);
-                        },
-                      ),
-          ),
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
