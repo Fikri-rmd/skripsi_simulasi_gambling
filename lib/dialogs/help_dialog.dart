@@ -19,7 +19,7 @@ class HelpDialog extends StatelessWidget {
             _buildHelpItem('1. Tekan tombol PUTAR untuk memutar mesin slot'),
             _buildHelpItem('2. Setiap putaran akan mengurangi 10 koin dari saldo Anda'),
             _buildHelpItem('3. Dapatkan kombinasi simbol yang sesuai untuk memenangkan hadiah'),
-            _buildHelpItem('4. Gunakan menu untuk melihat statistik dan informasi lainnya'),
+            _buildHelpItem('4. Gunakan menu profile untuk melihat statistik dan informasi lainnya'),
             _buildHelpItem('5. Reset permainan jika ingin memulai dari awal'),
             const SizedBox(height: 15),
             Container(

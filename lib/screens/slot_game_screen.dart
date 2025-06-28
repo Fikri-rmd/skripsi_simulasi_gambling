@@ -144,9 +144,14 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     
     setState(() {
       _rows = newSymbols;
-      _checkWin();
+      // _checkWin();
       _isSpinning = false;
     });
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if(mounted){
+      _checkWin();
+    }
+
   }
 
   Future<void> _startRollingAnimation(int row, int col, String finalSymbol) async {
@@ -171,9 +176,10 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     return completer.future;
   }
 
-  void _checkWin() {
+  Future<void> _checkWin() async {
   // Cek apakah spin ini memenuhi syarat untuk bisa menang
   // bool canWin = GameLogic.shouldWin(_spinCount);
+  await Future.delayed(const Duration(milliseconds: 50));
   bool canWin = _currentSpin >= GameLogic.settings.minSpinToWin;
   if (!canWin) {
     String lossMessage = 'Spin minimum belum tercapai (${GameLogic.settings.minSpinToWin})\nSaldo: $_coins';
@@ -271,24 +277,22 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     });
   }
 
-  Future<void> _openSettings() async {
-  await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ProbabilitySettingsPage(
-        initialWinPercentage: GameLogic.settings.winPercentage,
-        initialMinSpinToWin: GameLogic.settings.minSpinToWin,
-        initialSymbolRates: GameLogic.settings.symbolRates,
-      ),
-    ),
-  );
+//   Future<void> _openSettings() async {
+//   await Navigator.push(
+//     context,
+//     MaterialPageRoute(
+//       builder: (context) => ProbabilitySettingsPage(
+//         initialWinPercentage: GameLogic.settings.winPercentage,
+//         initialMinSpinToWin: GameLogic.settings.minSpinToWin,
+//         initialSymbolRates: GameLogic.settings.symbolRates,
+//       ),
+//     ),
+//   );
   
-  // Setelah kembali dari settings page, muat ulang pengaturan
-  final settings = await GameSettings.loadFromPrefs();
-  GameLogic.updateSettings(settings);
-}
-  @override
-
+//   // Setelah kembali dari settings page, muat ulang pengaturan
+//   final settings = await GameSettings.loadFromPrefs();
+//   GameLogic.updateSettings(settings);
+// }
   Widget _buildSlotScreen() {
     return Column(
       children: [
