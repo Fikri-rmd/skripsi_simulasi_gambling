@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:simulasi_slot/dialogs/help_dialog.dart';
 import 'package:simulasi_slot/dialogs/reset_dialog.dart';
 import 'package:simulasi_slot/dialogs/win_loss_dialog.dart';
@@ -34,6 +34,24 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   List<List<ScrollController>> _scrollControllers = [];
   List<List<bool>> _isRolling = [];
 
+
+  Future<void> _saveGameHistory(bool isWin, int amount, String details) async {
+    if (widget.isGuest) return; // Skip untuk guest
+    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore.collection('users').doc(user.uid).collection('gameHistory').add({
+        'result': isWin ? 'Menang' : 'Kalah',
+        'amount': amount,
+        'date': DateTime.now(),
+        'details': details,
+      });
+    } catch (e) {
+      print('Error saving game history: $e');
+    }
+  }
   @override
   void initState() {
     super.initState();
@@ -162,6 +180,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     if (_spinCount % 5 == 0) {
       lossMessage += '\n\nℹ️ Anda perlu ${GameLogic.settings.minSpinToWin} spin untuk mulai mendapatkan kemenangan';
     }
+    _saveGameHistory(false, -10, lossMessage);
     _showMessage(lossMessage, isWin: false);
     return;
   }
@@ -212,6 +231,8 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         }
         return "4x ${line.symbol} ($position) → +${line.reward}";
       }).join("\n");
+      _saveGameHistory(true, totalReward,
+        "Spin: $_spinCount | Kemenangan: +$totalReward Koin\n$details");
       _showMessage(
         "Kemenangan: +$totalReward Koin\n$details",
         isWin: true,
@@ -223,181 +244,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         isWin: false,
       );
     }
-  // Cek kemenangan segaris (horizontal, vertikal, diagonal)
-  // String? winningSymbol;
-  // // Horizontal
-  // for (int i = 0; i < 4; i++) {
-  //   if (_rows[i].every((s) => s == _rows[i][0])) {
-  //     winningSymbol = _rows[i][0];
-  //     break;
-  //   }
-  // }
-  //   // Vertikal
-  // if (winningSymbol == null) {
-  //   for (int j = 0; j < 4; j++) {
-  //     String symbol = _rows[0][j];
-  //     bool allSame = true;
-  //     for (int i = 1; i < 4; i++) {
-  //       if (_rows[i][j] != symbol) {
-  //         allSame = false;
-  //         break;
-  //       }
-  //     }
-  //     if (allSame) {
-  //       winningSymbol = symbol;
-  //       break;
-  //     }
-  //   }
-  // }
-  // // Diagonal kanan atas ke kiri bawah
-  // if (winningSymbol == null) {
-  //   String symbol = _rows[0][3];
-  //   bool allSame = true;
-  //   for (int i = 1; i < 4; i++) {
-  //     if (_rows[i][3 - i] != symbol) {
-  //       allSame = false;
-  //       break;
-  //     }
-  //   }
-  //   if (allSame) winningSymbol = symbol;
-  // }
-  // if (winningSymbol != null && winningSymbol != '🎰') {
-  //   // Dapatkan reward sesuai simbol
-  //   int reward = GameLogic.calculateReward(winningSymbol, 4);
-  //   setState(() {
-  //     _coins += reward;
-  //   });
-  //   _showMessage(
-  //     'Kemenangan: $winningSymbol segaris!\n+${reward} Koin',
-  //     isWin: true,
-  //   );
-  // } else {
-  //   _showMessage(
-  //     'Tidak ada kombinasi segaris\n'
-  //     '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
-  //     isWin: false,
-  //   );
-  // }
-  
-  // if (winningSymbol == null) {
-  //   String symbol = _rows[0][0];
-  //   bool allSame = true;
-  //   for (int i = 1; i < 4; i++) {
-  //     if (_rows[i][i] != symbol) {
-  //       allSame = false;
-  //       break;
-  //     }
-  //   }
-  //   if (allSame) winningSymbol = symbol;
-  // }
-
-  // List<String> activeSymbols = [];
-  // GameLogic.settings.symbolRates.forEach((symbol, rate) {
-  //   if (rate > 0) activeSymbols.add(symbol);
-  // });
-  // if (activeSymbols.length < 5) {
-  //   activeSymbols.addAll(['🍒', '🍋', '🍊','💎','💰']);
-  // }
-
-  // Hitung reward berdasarkan simbol yang muncul
-  // Map<String, int> counts = {};
-  // // int totalReward = 0;
-  // bool hasWinningCombination = false;
-  
-  // for (var row in _rows) {
-  //   for (var symbol in row) {
-  //     counts[symbol] = (counts[symbol] ?? 0) + 1;
-  //   }
-  // }
-
-  // final winningCombinations = [
-  //   { 'symbol': '🍒', 'count': 6, 'reward': 1 },
-  //   { 'symbol': '🍋', 'count': 5, 'reward': 2 },
-  //   { 'symbol': '💎', 'count': 4, 'reward': 10 },
-  //   { 'symbol': '💰', 'count': 3, 'reward': 30 },
-  //   { 'symbol': '🍊', 'count': 5, 'reward': 3 },
-  //   { 'symbol': '🔔', 'count': 5, 'reward': 4 },
-  //   { 'symbol': '🎲', 'count': 5, 'reward': 5 },
-  //   { 'symbol': '🥇', 'count': 5, 'reward': 6 },
-  //   { 'symbol': '🍇', 'count': 5, 'reward': 7 },
-  // ].where((combo) => activeSymbols.contains(combo['symbol'])).toList();
-  // for (var combo in winningCombinations) {
-  //   final symbol = combo['symbol'] as String;
-  //   final requiredCount = combo['count'] as int;
-  //   final rewardValue = combo['reward'] as int;
-    
-  //   if ((counts[symbol] ?? 0) >= requiredCount) {
-  //     totalReward += rewardValue;
-  //     hasWinningCombination = true;
-  //   }
-  // }
-   // Jika ada kombinasi pemenang
-  // if (hasWinningCombination) {
-  //   setState(() {
-  //     _coins += totalReward;
-  //   });
-  //   _showMessage(
-  //     'Kemenangan: +$totalReward Koin\n'
-  //     '🎲 Kombinasi simbol berhasil!',
-  //     isWin: true,
-  //   );
-  // } else {
-  //   // Meskipun persentase kemenangan terpenuhi, tapi tidak ada kombinasi
-  //   _showMessage(
-  //     'Tidak ada kombinasi pemenang\n'
-  //     '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
-  //     isWin: false,
-  //   );
-  // }
-  // int? _getMaxCountForSymbol(String symbol) {
-  //   final Map<String, int> maxCounts = {
-  //     '🍒': 6,
-  //     '🍋': 5,
-  //     '💎': 4,
-  //     '💰': 3,
-  //     '🍊': 5,
-  //     '🔔': 5,
-  //     '🎲': 5,
-  //     '🥇': 5,
-  //     '🍇': 5,
-  //   };
-    
-  //   return maxCounts[symbol];
-  // }
-  // counts.forEach((symbol, count) {
-  //   int reward = GameLogic.calculateReward(symbol, count);
-  //   if (symbol == '🍒' && count >= 6) reward = 1;
-  //   else if (symbol == '🍋' && count >= 5) reward = 2;
-  //   else if (symbol == '💎' && count >= 4) reward = 10;
-  //   else if (symbol == '💰' && count >= 3) reward = 30;
-  //   else if (symbol == '🍊' && count >= 5) reward = 3;
-  //   else if (symbol == '🔔' && count >= 5) reward = 4;
-  //   else if (symbol == '🎲' && count >= 5) reward = 5;
-  //   else if (symbol == '🥇' && count >= 5) reward = 6;
-  //   else if (symbol == '🍇' && count >= 5) reward = 7;
-  //   if (reward > 0) {
-  //     totalReward += reward;
-  //     hasWon = true;
-  //   }
-  // });
-  
-
-  // if (hasWon) {
-  //   setState(() {
-  //     _coins += totalReward;
-  //   });
-  //   _showMessage(
-  //     'Kemenangan: +$totalReward Koin\n'
-  //     'Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
-  //     isWin: true,
-  //   );
-  // } else {
-  //   _showMessage(
-  //     'Tidak ada kombinasi pemenang\n'
-  //     'Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
-  //     isWin: false,
-  //   );
-  // }
 }
 
   void _showMessage(String message, {required bool isWin}) {
@@ -440,26 +286,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   final settings = await GameSettings.loadFromPrefs();
   GameLogic.updateSettings(settings);
 }
-
-  // Future<void> _openSettings() async {
-  //   final result = await Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder: (context) => ProbabilitySettingsPage(
-  //         initialWinPercentage: GameLogic.settings.winPercentage,
-  //         initialMinSpinToWin: GameLogic.settings.minSpinToWin,
-  //         initialSymbolRates: GameLogic.settings.symbolRates,
-  //       ),
-  //     ),
-  //   );
-
-  //   if (result != null) {
-  //     // Terapkan pengaturan baru
-  //     GameLogic.updateSettings(result);
-  //     // Simpan ke SharedPreferences
-  //     await result.saveToPrefs();
-  //   }
-  // }
+  @override
 
   Widget _buildSlotScreen() {
     return Column(
@@ -534,11 +361,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
               tooltip: 'Reset Game',
             ),
           ],
-          // IconButton(
-          //   icon: const Icon(Icons.settings, color: Colors.white),
-          //   onPressed: _openSettings,
-          //   tooltip: 'Pengaturan',
-          // ),
         ],
       ),
       body: PageView(

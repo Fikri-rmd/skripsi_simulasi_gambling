@@ -1,4 +1,5 @@
 import 'package:simulasi_slot/screens/login_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,6 +13,8 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isLoadingHistory = true;
   bool _isEditing = false;
 
   // Data pengguna
@@ -19,6 +22,7 @@ class _ProfilePageState extends State<ProfilePage> {
   String _email = '';
   String? _photoURL;
   DateTime? _lastLogin;
+  List<Map<String, dynamic>> _gameHistory = [];
 
   // Controller untuk form
   final TextEditingController _nameController = TextEditingController();
@@ -27,6 +31,7 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _loadUserData();
+    _loadGameHistory();
   }
 
   Future<void> _loadUserData() async {
@@ -38,6 +43,39 @@ class _ProfilePageState extends State<ProfilePage> {
         _photoURL = user.photoURL;
         _lastLogin = user.metadata.lastSignInTime;
         _nameController.text = _name;
+      });
+    }
+  }
+
+  Future<void> _loadGameHistory() async {
+    User? user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('gameHistory')
+          .orderBy('date', descending: true)
+          .limit(10)
+          .get();
+
+      setState(() {
+        _gameHistory = snapshot.docs.map((doc) {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+          return {
+            'result': data['result'],
+            'amount': data['amount'],
+            'date': (data['date'] as Timestamp).toDate(),
+            'details': data['details'],
+          };
+        }).toList();
+        _isLoadingHistory = false;
+      });
+    } catch (e) {
+      print("Error loading game history: $e");
+      setState(() {
+        _isLoadingHistory = false;
       });
     }
   }
@@ -140,6 +178,43 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Widget _buildHistoryItem(Map<String, dynamic> history) {
+    final bool isWin = history['result'] == 'Menang';
+    final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+    
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      color: isWin ? Colors.green.shade50 : Colors.red.shade50,
+      child: ListTile(
+        leading: Icon(
+          isWin ? Icons.emoji_events : Icons.warning,
+          color: isWin ? Colors.green : Colors.red,
+        ),
+        title: Text(
+          history['result'],
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isWin ? Colors.green : Colors.red,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(history['details']),
+            Text(dateFormat.format(history['date'])),
+          ],
+        ),
+        trailing: Text(
+          '${history['amount'] > 0 ? '+' : ''}${history['amount']}',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: isWin ? Colors.green : Colors.red,
+          ),
+        ),
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final joinDateText = _lastLogin != null
@@ -196,6 +271,33 @@ class _ProfilePageState extends State<ProfilePage> {
               title: const Text('Tanggal Login Terakhir'),
               subtitle: Text(joinDateText),
             ),
+            const Divider(thickness: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.history, size: 24),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Riwayat Permainan',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            if (_isLoadingHistory)
+              const Center(child: CircularProgressIndicator())
+            else if (_gameHistory.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Belum ada riwayat permainan'),
+              )
+            else
+              Column(
+                children: _gameHistory
+                    .map((history) => _buildHistoryItem(history))
+                    .toList(),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: ElevatedButton.icon(
