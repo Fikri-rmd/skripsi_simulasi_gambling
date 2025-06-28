@@ -187,6 +187,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Text(
               _currentPage == _onboardingData.length - 1 ? "MASUK" : "LANJUT",
               style: const TextStyle(
+                color: Colors.white,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),

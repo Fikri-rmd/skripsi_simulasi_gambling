@@ -285,19 +285,25 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
-            if (_isLoadingHistory)
-              const Center(child: CircularProgressIndicator())
-            else if (_gameHistory.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text('Belum ada riwayat permainan'),
-              )
-            else
-              Column(
-                children: _gameHistory
-                    .map((history) => _buildHistoryItem(history))
-                    .toList(),
-              ),
+            Container(
+            height: 300, // Tinggi tetap 300 pixel
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: _isLoadingHistory
+                ? const Center(child: CircularProgressIndicator())
+                : _gameHistory.isEmpty
+                    ? const Center(child: Text('Belum ada riwayat permainan'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: _gameHistory.length,
+                        itemBuilder: (context, index) {
+                          return _buildHistoryItem(_gameHistory[index]);
+                        },
+                      ),
+          ),
+            const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: ElevatedButton.icon(

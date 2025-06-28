@@ -238,6 +238,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         isWin: true,
       );
     } else {
+      _saveGameHistory(false, -10, "Tidak ada kombinasi pemenang");
       _showMessage(
         'Tidak ada garis menang\n'
         '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
