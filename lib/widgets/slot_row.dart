@@ -7,7 +7,8 @@ class SlotRow extends StatelessWidget {
   final List<String> symbols;
   final List<ScrollController> scrollControllers;
   final List<bool> isRolling;
-  // final List<WinLine> winLines;
+  final List<WinLine> winLines;
+  
 
   const SlotRow({
     super.key,
@@ -15,19 +16,41 @@ class SlotRow extends StatelessWidget {
     required this.symbols,
     required this.scrollControllers,
     required this.isRolling,
-    // required this.winLines,
+    required this.winLines,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 80,
+      height: 70,
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: symbols.asMap().entries.map((entry) {
-          int colIndex = entry.key;
+          final colIndex = entry.key;
+          final symbols = entry.value;
+          // int colIndex = entry.key;
           // bool isWinning = _isInWinLine(rowIndex, colIndex);
+          final isWinning = winLines.any((line) {
+            switch (line.lineType) {
+              case 'horizontal':
+                return line.row == rowIndex;
+              case 'vertical':
+                return line.col == colIndex;
+              case 'diagonal':
+                // if (line.direction == 'down-right') return rowIndex == colIndex;
+                // if (line.direction == 'down-left') return rowIndex + colIndex == symbols.length - 1; 
+                
+                if (line.direction == 'down-right') {
+                  return rowIndex == colIndex;
+                } else if (line.direction == 'down-left') {
+                  return rowIndex + colIndex == symbols.length - 1; // Assuming 4 rows/columns
+                }
+                return false;
+              default:
+                return false;
+            }
+          });
           return SlotColumn(
             row: rowIndex,
             col: colIndex,
@@ -35,6 +58,7 @@ class SlotRow extends StatelessWidget {
             isRolling: isRolling[colIndex],
             controller: scrollControllers[colIndex],
             // isWinningSymbol: isWinning,
+            isWinningSymbol: isWinning,
           );
         }).toList(),
       ),

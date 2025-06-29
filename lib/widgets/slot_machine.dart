@@ -54,6 +54,7 @@ class SlotMachine extends StatelessWidget {
               symbols: rows[i],
               scrollControllers: scrollControllers[i],
               isRolling: isRolling[i],
+              winLines : winLines,
           
             ),
             

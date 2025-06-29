@@ -103,15 +103,15 @@ class GameLogic {
   static List<WinLine> checkWinLines(List<List<String>> grid) {
     List<WinLine> winLines = [];
     final baseRewards = {
-      '🍒': 1,
-      '🍋': 2,
+      '🍒': 3,
+      '🍋': 4,
       '💎': 10,
-      '💰': 30,
-      '🍊': 3,
-      '🔔': 4,
-      '🎲': 5,
-      '🥇': 6,
-      '🍇': 7,
+      '💰': 15,
+      '🍊': 5,
+      '🔔': 6,
+      '🎲': 7,
+      '🥇': 8,
+      '🍇': 9,
     };
     // Cek garis horizontal
     for (int row = 0; row < 4; row++) {
@@ -349,15 +349,15 @@ class GameLogic {
   static int calculateReward(String symbol, int count) {
     // Fixed rewards, tidak terpengaruh pengaturan
     Map<String, int> baseRewards = {
-      '🍒': 1,
-      '🍋': 2,
+      '🍒': 3,
+      '🍋': 4,
       '💎': 10,
-      '💰': 30,
-      '🍊': 3,
-      '🔔': 4,
-      '🎲': 5,
-      '🥇': 6,
-      '🍇': 7,
+      '💰': 15,
+      '🍊': 5,
+      '🔔': 6,
+      '🎲': 7,
+      '🥇': 8,
+      '🍇': 9,
     };
     
     return baseRewards[symbol]! * count;

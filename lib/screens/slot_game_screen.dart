@@ -16,12 +16,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class SlotGameScreen extends StatefulWidget {
   final bool isGuest;
   const SlotGameScreen({super.key, this.isGuest = false});
+  
   @override
   State<SlotGameScreen> createState() => _SlotGameScreenState();
 }
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
+  Set<Point<int>> _winningPositions = {}; // gunakan dart:math Point
+  bool _animateAll = false;
   List<WinLine> _winLines = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   Map<String,int> _symbolCounts = {};
@@ -111,6 +114,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _spinCount = 0;
       _rows = List.generate(4, (_) => List.filled(4, '🎰'));
       _initScrollControllers();
+      _resetSymbolCounts();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(
@@ -147,7 +151,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       // _checkWin();
       _isSpinning = false;
     });
-    await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 1000));
     if(mounted){
       _checkWin();
     }
@@ -218,6 +222,15 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       for (var line in _winLines) {
         totalReward += line.reward;
       }
+      setState(() {
+        _animateAll = true;
+        
+      });
+      await Future.delayed(const Duration(milliseconds: 800));
+      setState(() {
+        _animateAll = false;
+        
+      });
      setState(() {
         _coins += totalReward;
       });
@@ -277,22 +290,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     });
   }
 
-//   Future<void> _openSettings() async {
-//   await Navigator.push(
-//     context,
-//     MaterialPageRoute(
-//       builder: (context) => ProbabilitySettingsPage(
-//         initialWinPercentage: GameLogic.settings.winPercentage,
-//         initialMinSpinToWin: GameLogic.settings.minSpinToWin,
-//         initialSymbolRates: GameLogic.settings.symbolRates,
-//       ),
-//     ),
-//   );
-  
-//   // Setelah kembali dari settings page, muat ulang pengaturan
-//   final settings = await GameSettings.loadFromPrefs();
-//   GameLogic.updateSettings(settings);
-// }
+
   Widget _buildSlotScreen() {
     return Column(
       children: [
@@ -329,15 +327,66 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
           color: Colors.red.shade50,
           padding: const EdgeInsets.all(12),
           child: const Text(
-            'SIMULASI INI MEMPERLIHATKAN BAGAIMANA ALGORITMA JUDI ONLINE BEKERJA\n'
-            'HANYA UNTUK EDUKASI - JANGAN COBA DI DUNIA NYATA',
+            '• SIMULASI INI MEMPERLIHATKAN BAGAIMANA ALGORITMA JUDI ONLINE BEKERJA\n'
+            '• TIDAK ADA STRATEGI YANG BISA MENGALAHKAN MESIN YANG DIRANCANG UNTUK MENGUNTUNGKAN PEMILIK\n'
+            '• JUDI MENYEBABKAN KETERGANTUNGAN, MASALAH KEUANGAN, DAN KERETAKAN KELUARGA',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.red, fontSize: 12),
+            
           ),
-        ),
-      ],
+        
+        ),const SizedBox(height: 5),
+        ElevatedButton(
+              onPressed: () => _showEducationalDialog(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade700,
+                foregroundColor: Colors.white,
+                
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+              ),
+              child: const Text('BACA LEBIH LANJUT'),
+    ),],
     );
   }
+  void _showEducationalDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('EDUKASI ANTI JUDI', style: TextStyle(color: Colors.red)),
+      content: const SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'FAKTA TENTANG PERJUDIAN:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text('• 99% pemain judi mengalami kerugian finansial jangka panjang'),
+            Text('• Mesin slot dirancang dengan "Return to Player" (RTP) di bawah 100%, artinya pemain selalu dirugikan dalam jangka panjang'),
+            Text('• Semakin sering bermain, semakin besar kemungkinan kalah karena algoritma house edge'),
+            SizedBox(height: 20),
+            Text(
+              'BAHAYA PERJUDIAN:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text('• Kecanduan judi bisa menyebabkan gangguan mental'),
+            Text('• Banyak kasus perceraian dan masalah keluarga akibat judi'),
+            Text('• 1 dari 5 pecandu judi mencoba bunuh diri'),
+            SizedBox(height: 20),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('MENGERTI',selectionColor: Colors.red, style: TextStyle(color: Colors.red),)
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

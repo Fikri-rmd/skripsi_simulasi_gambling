@@ -40,6 +40,23 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                border: Border.all(color: Colors.red),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                'PERINGATAN: Dalam judi sungguhan, Anda TIDAK BISA mengubah pengaturan ini. '
+                'Kasino selalu mengatur mesin untuk menguntungkan mereka (RTP < 100%). '
+                'Simulasi ini hanya untuk menunjukkan bagaimana pemain selalu dirugikan dalam jangka panjang.',
+                style: TextStyle(color: Colors.red, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 20),
             // Tombol kembali di bagian atas
             // Padding(
             //   padding: const EdgeInsets.only(bottom: 20),
