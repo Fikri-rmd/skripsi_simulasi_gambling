@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'dart:async';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -23,7 +25,7 @@ class SlotGameScreen extends StatefulWidget {
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
-  Set<Point<int>> _winningPositions = {}; // gunakan dart:math Point
+  final Set<Point<int>> _winningPositions = {}; // gunakan dart:math Point
   bool _animateAll = false;
   List<WinLine> _winLines = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -47,7 +49,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     try {
       await _firestore.collection('users').doc(user.uid).collection('gameHistory').add({
         'result': isWin ? 'Menang' : 'Kalah',
-        'amount': amount,
+        'coin': amount,
         'date': DateTime.now(),
         'details': details,
       });
@@ -115,6 +117,9 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _rows = List.generate(4, (_) => List.filled(4, '🎰'));
       _initScrollControllers();
       _resetSymbolCounts();
+      _isSpinning = false;
+      _currentSpin = 0;
+      _winLines = [];
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       showDialog(
@@ -123,7 +128,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       );
     });
   }
-
+  @override
   Future<void> _spin() async {
     if (_coins < 10 || _isSpinning) return;
 
@@ -135,16 +140,65 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _resetSymbolCounts();
       _winLines = []; 
     });
+
+    // Generate new symbols
+    List<List<String>> newSymbols = GameLogic.generateSymbols();
     
-    final newSymbols = GameLogic.generateSymbols();
+    // final newSymbols = GameLogic.generateSymbols();
+    // Check if we need to force a win
+    bool isForceWinNeeded = GameLogic.settings.winPercentage == 1.0;
+    String? forceWinSymbol;
+    String? forceWinType;
+    int? forceWinPosition;
+
+     if (isForceWinNeeded) {
+      final winTypes = ['horizontal', 'vertical', 'diagonal'];
+      forceWinType = winTypes[Random().nextInt(winTypes.length)];
+      
+      // Get active symbols
+      List<String> activeSymbols = [];
+      GameLogic.settings.symbolRates.forEach((symbol, rate) {
+        if (rate > 0) activeSymbols.add(symbol);
+      });
+    if (activeSymbols.isNotEmpty) {
+        forceWinSymbol = activeSymbols[Random().nextInt(activeSymbols.length)];
+        
+        // Determine position based on type
+        switch (forceWinType) {
+          case 'horizontal':
+            forceWinPosition = Random().nextInt(4);
+            break;
+          case 'vertical':
+            forceWinPosition = Random().nextInt(4);
+            break;
+          case 'diagonal':
+            forceWinPosition = Random().nextInt(2); // 0 = down-right, 1 = down-left
+            break;
+        }
+      }
+    }
+
     List<Future> animations = [];
     for (int row = 0; row < 4; row++) {
       for (int col = 0; col < 4; col++) {
-        animations.add(_startRollingAnimation(row, col, newSymbols[row][col]));
+        final isForceWinCell = isForceWinNeeded && 
+        GameLogic.isInForceWinPattern(row, col, forceWinType, forceWinPosition);
+        final cellSymbol = isForceWinCell ? forceWinSymbol! : newSymbols[row][col];
+        animations.add(_startRollingAnimation(row, col, cellSymbol,applyForceWin: isForceWinCell));
       }
     }
     
     await Future.wait(animations);
+
+      if (isForceWinNeeded && forceWinSymbol != null && forceWinType != null && forceWinPosition != null) {
+      for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+          if (GameLogic.isInForceWinPattern(row, col, forceWinType, forceWinPosition)) {
+            newSymbols[row][col] = forceWinSymbol;
+          }
+        }
+      }
+    }
     
     setState(() {
       _rows = newSymbols;
@@ -158,10 +212,17 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
   }
 
-  Future<void> _startRollingAnimation(int row, int col, String finalSymbol) async {
+  Future<void> _startRollingAnimation(int row, int col, String finalSymbol, {bool applyForceWin = false}) async {
     setState(() => _isRolling[row][col] = true);
     
     List<String> rollingSymbols = List.generate(20, (_) => GameLogic.getRandomSymbol());
+    // Apply forced win in the middle of animation
+    if (applyForceWin) {
+      // Replace symbols in the middle of the animation
+      for (int i = 10; i < 15; i++) {
+        rollingSymbols[i] = finalSymbol;
+      }
+    }
     rollingSymbols.add(finalSymbol);
     
     const double itemHeight = 70.0;
@@ -182,7 +243,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
   Future<void> _checkWin() async {
   // Cek apakah spin ini memenuhi syarat untuk bisa menang
-  // bool canWin = GameLogic.shouldWin(_spinCount);
   await Future.delayed(const Duration(milliseconds: 50));
   bool canWin = _currentSpin >= GameLogic.settings.minSpinToWin;
   if (!canWin) {
@@ -197,10 +257,15 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   // Cek garis-garis yang menang (4 simbol)
     _winLines = GameLogic.checkWinLines(_rows);
     int totalReward = 0;
+    
     bool forceWin = GameLogic.settings.winPercentage == 1.0;
     // Jika winPercentage 100% dan tidak ada garis menang alami, buat garis menang paksa
   if (forceWin && _winLines.isEmpty) {
     // Pilih simbol acak yang aktif
+    final winTypes = ['horizontal', 'vertical', 'diagonal'];
+    final random = Random();
+    final selectedType = winTypes[random.nextInt(winTypes.length)];
+
     List<String> activeSymbols = [];
     GameLogic.settings.symbolRates.forEach((symbol, rate) {
       if (rate > 0) activeSymbols.add(symbol);
@@ -208,16 +273,43 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     
     if (activeSymbols.isNotEmpty) {
       String winSymbol = activeSymbols[Random().nextInt(activeSymbols.length)];
-      
-      // Buat garis horizontal pertama menang
-      for (int col = 0; col < 4; col++) {
-        _rows[0][col] = winSymbol;
+      final newRows = List<List<String>>.from(_rows);
+
+      switch (selectedType) {
+        case 'horizontal':
+          final rowIdx = random.nextInt(4);
+          for (int col = 0; col < 4; col++) {
+            newRows[rowIdx][col] = winSymbol;
+          }
+          break;
+
+        case 'vertical':
+          final colIdx = random.nextInt(4);
+          for (int row = 0; row < 4; row++) {
+            newRows[row][colIdx] = winSymbol;
+          }
+          break;
+
+        case 'diagonal':
+          final direction = random.nextBool() ? 'down-right' : 'down-left';
+          if (direction == 'down-right') {
+            for (int i = 0; i < 4; i++) {
+              newRows[i][i] = winSymbol;
+            }
+          } else {
+            for (int i = 0; i < 4; i++) {
+              newRows[i][3 - i] = winSymbol;
+            }
+          }
+          break;
       }
-      
+      setState(() => _rows = newRows);
+      // Beri sedikit delay untuk animasi
+      await Future.delayed(const Duration(milliseconds: 300));
+
       // Hitung ulang winLines dengan pola baru
-      _winLines = GameLogic.checkWinLines(_rows);
     }}
-    
+      _winLines = GameLogic.checkWinLines(_rows);
      if (_winLines.isNotEmpty) {
       for (var line in _winLines) {
         totalReward += line.reward;

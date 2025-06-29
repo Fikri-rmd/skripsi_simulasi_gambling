@@ -12,6 +12,7 @@ class ProbabilitySettingsPage extends StatefulWidget {
     required this.initialWinPercentage,
     required this.initialMinSpinToWin,
     required this.initialSymbolRates,
+
   }) : super(key: key);
 
   @override
@@ -22,6 +23,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
   late double _winPercentage;
   late int _minSpinToWin;
   late Map<String, double> _symbolRates;
+  // late SharedPreferences _prefs;
 
   @override
   void initState() {

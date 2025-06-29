@@ -28,9 +28,7 @@ class SlotRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: symbols.asMap().entries.map((entry) {
           final colIndex = entry.key;
-          final symbols = entry.value;
-          // int colIndex = entry.key;
-          // bool isWinning = _isInWinLine(rowIndex, colIndex);
+    
           final isWinning = winLines.any((line) {
             switch (line.lineType) {
               case 'horizontal':
@@ -38,13 +36,11 @@ class SlotRow extends StatelessWidget {
               case 'vertical':
                 return line.col == colIndex;
               case 'diagonal':
-                // if (line.direction == 'down-right') return rowIndex == colIndex;
-                // if (line.direction == 'down-left') return rowIndex + colIndex == symbols.length - 1; 
                 
                 if (line.direction == 'down-right') {
                   return rowIndex == colIndex;
                 } else if (line.direction == 'down-left') {
-                  return rowIndex + colIndex == symbols.length - 1; // Assuming 4 rows/columns
+                  return rowIndex + colIndex == 3; // Assuming 4 rows/columns
                 }
                 return false;
               default:
@@ -57,39 +53,10 @@ class SlotRow extends StatelessWidget {
             finalSymbol: entry.value,
             isRolling: isRolling[colIndex],
             controller: scrollControllers[colIndex],
-            // isWinningSymbol: isWinning,
             isWinningSymbol: isWinning,
           );
         }).toList(),
       ),
     );
   }
-  // bool _isInWinLine(int row, int col) {
-  //   for (var line in winLines) {
-  //     switch (line.lineType) {
-  //       case 'horizontal':
-  //         if (line.row == row) {
-  //           return true;
-  //         }
-  //         break;
-  //       case 'vertical':
-  //         if (line.col == col) {
-  //           return true;
-  //         }
-  //         break;
-  //       case 'diagonal':
-  //         if (line.direction == 'down-right') {
-  //           if (row == col) {
-  //             return true;
-  //           }
-  //         } else if (line.direction == 'down-left') {
-  //           if (row + col == 3) {
-  //             return true;
-  //           }
-  //         }
-  //         break;
-  //     }
-  //   }
-  //   return false;
-  // }
 }
