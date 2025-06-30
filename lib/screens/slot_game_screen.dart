@@ -8,10 +8,12 @@ import 'package:simulasi_slot/dialogs/reset_dialog.dart';
 import 'package:simulasi_slot/dialogs/win_loss_dialog.dart';
 import 'package:simulasi_slot/screens/profile_page.dart';
 import 'package:simulasi_slot/screens/setting_page.dart';
+import 'package:simulasi_slot/services/user_service.dart';
 import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:simulasi_slot/widgets/bottom_nav_bar.dart';
 import 'package:simulasi_slot/widgets/slot_machine.dart';
 import 'package:flutter/material.dart';
+// ignore: unused_import
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -52,6 +54,8 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         'coin': amount,
         'date': DateTime.now(),
         'details': details,
+        'winPercentage': GameLogic.settings.winPercentage,
+        'minSpin': GameLogic.settings.minSpinToWin,
       });
     } catch (e) {
       print('Error saving game history: $e');
@@ -61,6 +65,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   void initState() {
     super.initState();
     _resetSymbolCounts();
+    _initUserData();
     _pageController = PageController(initialPage: _currentNavIndex);
     if (widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -104,6 +109,36 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _isRolling.add(rowRolling);
     }
   }
+
+  Future<void> _initUserData() async {
+  if (widget.isGuest) return;
+  
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  // Cek apakah user sudah ada di database
+  final doc = await FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .get();
+
+  if (!doc.exists) {
+    // Simpan data baru jika belum ada
+    await UserService.saveUserData(
+      userId: user.uid,
+      nama: user.displayName ?? '',
+      email: user.email ?? '',
+    );
+  } else {
+    // Update last login jika sudah ada
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .update({
+      'lastLogin': FieldValue.serverTimestamp(),
+    });
+  }
+}
 
   Future<void> _loadSettings() async {
     final settings = await GameSettings.loadFromPrefs();
@@ -236,6 +271,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
   // Fungsi untuk memastikan tidak ada pola menang
 void _breakWinningPatterns(List<List<String>> symbols) {
+  // ignore: unused_local_variable
   final random = Random();
   
   // Cek dan ubah pola horizontal

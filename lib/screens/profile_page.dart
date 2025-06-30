@@ -34,9 +34,26 @@ class _ProfilePageState extends State<ProfilePage> {
     // _loadGameHistory();
   }
 
-  Future<void> _loadUserData() async {
-    User? user = _auth.currentUser;
-    if (user != null) {
+
+Future<void> _loadUserData() async {
+  User? user = _auth.currentUser;
+  if (user != null) {
+    // Dapatkan data dari Firestore
+    DocumentSnapshot doc = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (doc.exists) {
+      setState(() {
+        _name = doc['nama'] ?? user.displayName ?? '';
+        _email = doc['email'] ?? user.email ?? '';
+        _photoURL = user.photoURL;
+        _lastLogin = (doc['lastLogin'] as Timestamp?)?.toDate();
+        _nameController.text = _name;
+      });
+    } else {
+      // Fallback ke data auth
       setState(() {
         _name = user.displayName ?? '';
         _email = user.email ?? '';
@@ -46,6 +63,8 @@ class _ProfilePageState extends State<ProfilePage> {
       });
     }
   }
+}
+
   Stream<QuerySnapshot> _getGameHistoryStream() {
     User? user = _auth.currentUser;
     if (user == null) {
@@ -186,7 +205,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ],
         ),
         trailing: Text(
-          '${history['amount'] > 0 ? '+' : ''}${history['amount']}',
+          '${history['coin'] > 0 ? '+' : ''}${history['coin']}',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -297,7 +316,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       final history = historyList[index].data() as Map<String, dynamic>;
                       return _buildHistoryItem({
                         'result': history['result'],
-                        'amount': history['amount'],
+                        'coin': history['coin'],
                         'date': (history['date'] as Timestamp).toDate(),
                         'details': history['details'],
                       });
