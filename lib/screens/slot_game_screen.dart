@@ -1,18 +1,18 @@
 // ignore_for_file: unused_field
+
 import 'dart:async';
 import 'dart:math';
-
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:simulasi_slot/dialogs/help_dialog.dart';
 import 'package:simulasi_slot/dialogs/reset_dialog.dart';
 import 'package:simulasi_slot/dialogs/win_loss_dialog.dart';
 import 'package:simulasi_slot/screens/profile_page.dart';
 import 'package:simulasi_slot/screens/setting_page.dart';
-import 'package:simulasi_slot/services/game_session_manager.dart';
-import 'package:simulasi_slot/services/user_repository.dart';
 import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:simulasi_slot/widgets/bottom_nav_bar.dart';
 import 'package:simulasi_slot/widgets/slot_machine.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SlotGameScreen extends StatefulWidget {
@@ -25,8 +25,6 @@ class SlotGameScreen extends StatefulWidget {
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
-  final GameSessionManager _sessionManager = GameSessionManager();
-  final UserRepository _userRepo = UserRepository();
   final Set<Point<int>> _winningPositions = {}; // gunakan dart:math Point
   bool _animateAll = false;
   List<WinLine> _winLines = [];
@@ -42,28 +40,27 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   List<List<bool>> _isRolling = [];
 
 
-   Future<void> _initGameSession() async {
-    if (!widget.isGuest) {
-      final user = _userRepo.currentUser;
-      if (user != null) {
-        await _sessionManager.initSession(user.uid, _coins);
-      }
-    }
-  }
   Future<void> _saveGameHistory(bool isWin, int amount, String details) async {
     if (widget.isGuest) return; // Skip untuk guest
-  
-    await _sessionManager.saveGameResult(
-      isWin: isWin,
-      amount: amount,
-      details: details,
-    );
+    
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore.collection('users').doc(user.uid).collection('gameHistory').add({
+        'result': isWin ? 'Menang' : 'Kalah',
+        'coin': amount,
+        'date': DateTime.now(),
+        'details': details,
+      });
+    } catch (e) {
+      print('Error saving game history: $e');
+    }
   }
   @override
   void initState() {
     super.initState();
     _resetSymbolCounts();
-    _initGameSession();
     _pageController = PageController(initialPage: _currentNavIndex);
     if (widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -239,7 +236,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
   // Fungsi untuk memastikan tidak ada pola menang
 void _breakWinningPatterns(List<List<String>> symbols) {
-  // ignore: unused_local_variable
   final random = Random();
   
   // Cek dan ubah pola horizontal
@@ -607,9 +603,6 @@ void _breakWinningPatterns(List<List<String>> symbols) {
 
   @override
   void dispose() {
-    if (!widget.isGuest) {
-      _sessionManager.endSession(_coins, _spinCount);
-    }
     for (var row in _scrollControllers) {
       for (var controller in row) {
         controller.dispose();

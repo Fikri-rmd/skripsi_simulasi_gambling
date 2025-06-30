@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:simulasi_slot/screens/login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';

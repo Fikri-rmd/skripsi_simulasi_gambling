@@ -1,11 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-   // ignore: unused_field
-   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   User get user => _auth.currentUser!;
 
@@ -29,8 +26,6 @@ class FirebaseAuthService {
       print(e.stackTrace.toString());
     }
   }
-
-  
   
 
   Future<void> signOut() async {

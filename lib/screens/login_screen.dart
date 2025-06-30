@@ -3,8 +3,7 @@ import 'package:simulasi_slot/screens/slot_game_screen.dart';
 // import 'package:firebase_auth101/test_slot.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:simulasi_slot/services/auth_service.dart';
-
+import '../services/firebase_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
