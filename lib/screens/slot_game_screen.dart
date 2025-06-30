@@ -1,7 +1,7 @@
 // ignore_for_file: unused_field
 import 'dart:async';
 import 'dart:math';
-import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:simulasi_slot/dialogs/help_dialog.dart';
 import 'package:simulasi_slot/dialogs/reset_dialog.dart';
 import 'package:simulasi_slot/dialogs/win_loss_dialog.dart';
@@ -13,7 +13,6 @@ import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:simulasi_slot/widgets/bottom_nav_bar.dart';
 import 'package:simulasi_slot/widgets/slot_machine.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SlotGameScreen extends StatefulWidget {
@@ -240,6 +239,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
   // Fungsi untuk memastikan tidak ada pola menang
 void _breakWinningPatterns(List<List<String>> symbols) {
+  // ignore: unused_local_variable
   final random = Random();
   
   // Cek dan ubah pola horizontal
