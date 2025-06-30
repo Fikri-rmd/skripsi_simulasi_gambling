@@ -46,40 +46,6 @@ class _ProfilePageState extends State<ProfilePage> {
       });
     }
   }
-
-  // Future<void> _loadGameHistory() async {
-  //   User? user = _auth.currentUser;
-  //   if (user == null) return;
-
-  //   try {
-  //     QuerySnapshot snapshot = await _firestore
-  //         .collection('users')
-  //         .doc(user.uid)
-  //         .collection('gameHistory')
-  //         .orderBy('date', descending: true)
-  //         .limit(10)
-  //         .get();
-
-  //     setState(() {
-  //       _gameHistory = snapshot.docs.map((doc) {
-  //         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-  //         return {
-  //           'result': data['result'],
-  //           'amount': data['amount'],
-  //           'date': (data['date'] as Timestamp).toDate(),
-  //           'details': data['details'],
-  //         };
-  //       }).toList();
-  //       _isLoadingHistory = false;
-  //     });
-  //   } catch (e) {
-  //     print("Error loading game history: $e");
-  //     setState(() {
-  //       _isLoadingHistory = false;
-  //     });
-  //   }
-  // }
-
   Stream<QuerySnapshot> _getGameHistoryStream() {
     User? user = _auth.currentUser;
     if (user == null) {
@@ -287,13 +253,13 @@ class _ProfilePageState extends State<ProfilePage> {
               subtitle: Text(joinDateText),
             ),
             const Divider(thickness: 1),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
               child: Row(
                 children: [
-                  const Icon(Icons.history, size: 24),
-                  const SizedBox(width: 10),
-                  const Text(
+                  Icon(Icons.history, size: 24),
+                  SizedBox(width: 10),
+                  Text(
                     'Riwayat Permainan',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),

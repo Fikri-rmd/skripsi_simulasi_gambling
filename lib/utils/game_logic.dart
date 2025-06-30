@@ -100,6 +100,7 @@ class GameLogic {
     },
   );
 
+
   static List<WinLine> checkWinLines(List<List<String>> grid) {
     List<WinLine> winLines = [];
     final baseRewards = {
@@ -210,13 +211,7 @@ class GameLogic {
       if (rate > 0) {
         activeSymbols[symbol] = rate;
       }});
-      if (activeSymbols.length < 5) {
-      activeSymbols['🍒'] = 0.40;
-      activeSymbols['🍋'] = 0.30;
-      activeSymbols['🍊'] = 0.30;
-      activeSymbols['💎'] = 0.10;
-      activeSymbols['💰'] = 0.10;
-    }
+    
     // Hitung total weight
     double totalWeight = settings.symbolRates.values.fold(0.0, (sum, weight) => sum + weight);
     
@@ -314,26 +309,11 @@ class GameLogic {
     return maxCounts[symbol];
   }
 
-  // // Hitung reward berdasarkan simbol yang muncul
-  // static int calculateReward(String symbol, int count) {
-  //   // Fixed rewards, tidak terpengaruh pengaturan
-  //   Map<String, int> baseRewards = {
-  //     '🍒': 3,
-  //     '🍋': 4,
-  //     '💎': 10,
-  //     '💰': 15,
-  //     '🍊': 5,
-  //     '🔔': 6,
-  //     '🎲': 7,
-  //     '🥇': 8,
-  //     '🍇': 9,
-  //   };
-    
-  //   return baseRewards[symbol]! * count;
-  // }
 
   // Cek apakah spin ini menghasilkan kemenangan
   static bool shouldWin(int spinCount) {
+    // Jika winPercentage 0%, tidak pernah menang
+    if (settings.winPercentage == 0.0) return false;
     // Hanya berpeluang menang jika sudah mencapai spin minimum
     if (spinCount < settings.minSpinToWin) return false;
     

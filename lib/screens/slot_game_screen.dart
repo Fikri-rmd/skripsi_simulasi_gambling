@@ -128,7 +128,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       );
     });
   }
-  @override
   Future<void> _spin() async {
     if (_coins < 10 || _isSpinning) return;
 
@@ -141,16 +140,39 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _winLines = []; 
     });
 
+    // Handle khusus untuk winPercentage 0%
+    bool isZeroWinMode = GameLogic.settings.winPercentage == 0.0;
+
     // Generate new symbols
     List<List<String>> newSymbols = GameLogic.generateSymbols();
     
+    // Pastikan tidak ada garis menang jika winPercentage 0%
+  if (isZeroWinMode) {
+    _breakWinningPatterns(newSymbols);
+  }
     // final newSymbols = GameLogic.generateSymbols();
     // Check if we need to force a win
-    bool isForceWinNeeded = GameLogic.settings.winPercentage == 1.0;
+    bool shouldWinThisSpin = GameLogic.shouldWin(_spinCount);
+    bool isForceWinNeeded = shouldWinThisSpin;
     String? forceWinSymbol;
     String? forceWinType;
     int? forceWinPosition;
-
+    if (shouldWinThisSpin && _winLines.isEmpty) {
+  // Paksa kemenangan jika belum ada garis menang alami
+  final winTypes = ['horizontal', 'vertical', 'diagonal'];
+  forceWinType = winTypes[Random().nextInt(winTypes.length)];
+  
+  // Pilih simbol aktif secara acak
+  List<String> activeSymbols = [];
+  GameLogic.settings.symbolRates.forEach((symbol, rate) {
+    if (rate > 0) activeSymbols.add(symbol);
+  });
+  
+  if (activeSymbols.isNotEmpty) {
+    forceWinSymbol = activeSymbols[Random().nextInt(activeSymbols.length)];
+    // ... (tentukan forceWinPosition)
+  }
+}
      if (isForceWinNeeded) {
       final winTypes = ['horizontal', 'vertical', 'diagonal'];
       forceWinType = winTypes[Random().nextInt(winTypes.length)];
@@ -212,6 +234,43 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
   }
 
+  // Fungsi untuk memastikan tidak ada pola menang
+void _breakWinningPatterns(List<List<String>> symbols) {
+  final random = Random();
+  
+  // Cek dan ubah pola horizontal
+  for (int row = 0; row < 4; row++) {
+    if (symbols[row][0] == symbols[row][1] && 
+        symbols[row][1] == symbols[row][2] &&
+        symbols[row][2] == symbols[row][3]) {
+      symbols[row][3] = GameLogic.getRandomSymbol();
+    }
+  }
+  
+  // Cek dan ubah pola vertikal
+  for (int col = 0; col < 4; col++) {
+    if (symbols[0][col] == symbols[1][col] && 
+        symbols[1][col] == symbols[2][col] &&
+        symbols[2][col] == symbols[3][col]) {
+      symbols[3][col] = GameLogic.getRandomSymbol();
+    }
+  }
+  
+  // Cek diagonal utama
+  if (symbols[0][0] == symbols[1][1] && 
+      symbols[1][1] == symbols[2][2] &&
+      symbols[2][2] == symbols[3][3]) {
+    symbols[3][3] = GameLogic.getRandomSymbol();
+  }
+  
+  // Cek diagonal sekunder
+  if (symbols[0][3] == symbols[1][2] && 
+      symbols[1][2] == symbols[2][1] &&
+      symbols[2][1] == symbols[3][0]) {
+    symbols[3][0] = GameLogic.getRandomSymbol();
+  }
+}
+
   Future<void> _startRollingAnimation(int row, int col, String finalSymbol, {bool applyForceWin = false}) async {
     setState(() => _isRolling[row][col] = true);
     
@@ -241,11 +300,22 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     return completer.future;
   }
 
-  Future<void> _checkWin() async {
+  void _checkWin() async {
   // Cek apakah spin ini memenuhi syarat untuk bisa menang
   await Future.delayed(const Duration(milliseconds: 50));
   bool canWin = _currentSpin >= GameLogic.settings.minSpinToWin;
+
+  if (GameLogic.settings.winPercentage == 0.0) {
+    _saveGameHistory(false, -10, "Mode 0%: Tidak ada kemenangan yang mungkin");
+    _showMessage(
+      'Mode 0% aktif: Tidak ada kemenangan yang mungkin\n'
+      'Simbol muncul sesuai pengaturan, tetapi tidak akan membentuk garis menang',
+      isWin: false,
+    );
+    return;
+  }
   if (!canWin) {
+    _winLines = GameLogic.checkWinLines(_rows);
     String lossMessage = 'Spin minimum belum tercapai (${GameLogic.settings.minSpinToWin})\nSaldo: $_coins';
     if (_spinCount % 5 == 0) {
       lossMessage += '\n\nℹ️ Anda perlu ${GameLogic.settings.minSpinToWin} spin untuk mulai mendapatkan kemenangan';
@@ -253,9 +323,10 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     _saveGameHistory(false, -10, lossMessage);
     _showMessage(lossMessage, isWin: false);
     return;
+    
   }
-  // Cek garis-garis yang menang (4 simbol)
     _winLines = GameLogic.checkWinLines(_rows);
+    
     int totalReward = 0;
     
     bool forceWin = GameLogic.settings.winPercentage == 1.0;

@@ -26,6 +26,7 @@ class FirebaseAuthService {
       print(e.stackTrace.toString());
     }
   }
+  
 
   Future<void> signOut() async {
     _auth.signOut();
