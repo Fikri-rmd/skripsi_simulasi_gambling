@@ -6,33 +6,56 @@ class HelpDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('❓ Cara Bermain'),
-      content: SingleChildScrollView(
+      title: const Text('Cara Bermain'),
+      content: const SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Panduan Bermain Slot Machine Simulator:',
+            Text(
+              'TUJUAN:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 15),
-            _buildHelpItem('1. Tekan tombol PUTAR untuk memutar mesin slot'),
-            _buildHelpItem('2. Setiap putaran akan mengurangi 10 koin dari saldo Anda'),
-            _buildHelpItem('3. Dapatkan kombinasi simbol yang sesuai untuk memenangkan hadiah'),
-            _buildHelpItem('4. Gunakan menu profile untuk melihat statistik dan informasi lainnya'),
-            _buildHelpItem('5. Reset permainan jika ingin memulai dari awal'),
-            const SizedBox(height: 15),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Text(
-                '⚠️ INGAT: Ini hanya simulasi untuk tujuan edukasi. '
-                'Judi dapat menyebabkan ketagihan dan kerugian finansial!',
-                style: TextStyle(color: Colors.red),
-              ),
+            Text('Simulasi edukasi ini menunjukkan cara mesin slot bekerja melawan pemain.'),
+            SizedBox(height: 16),
+            Text(
+              'CARA BERMAIN:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text('• Setiap putaran menghabiskan 10 koin'),
+            Text('• Anda mulai dengan 500 koin'),
+            Text('• Dapatkan 4 simbol yang sama dalam satu garis untuk menang'),
+            Text('• Garis menang bisa horizontal, vertikal, atau diagonal'),
+            SizedBox(height: 16),
+            Text(
+              'KOMBINASI MENANG:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text('🍒 Ceri: 12 koin (4x3)'),
+            Text('🍋 Lemon: 16 koin (4x4)'),
+            Text('🍊 Jeruk: 20 koin (4x5)'),
+            Text('🔔 Bel: 24 koin (4x6)'),
+            Text('🎲 Dadu: 28 koin (4x7)'),
+            Text('🥇 Emas: 32 koin (4x8)'),
+            Text('🍇 Anggur: 36 koin (4x9)'),
+            Text('💎 Berlian: 40 koin (4x10)'),
+            Text('💰 Uang: 60 koin (4x15)'),
+            SizedBox(height: 16),
+            Text(
+              'PENGATURAN:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text('• Atur persentase kemenangan (0-100%)'),
+            Text('• Setel putaran minimum sebelum menang'),
+            Text('• Konfigurasi tingkat kemunculan simbol'),
+            SizedBox(height: 16),
+            Text(
+              'TUJUAN EDUKASI:',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+            Text(
+              'Simulator ini menunjukkan bagaimana algoritma perjudian dirancang untuk menguntungkan rumah. '
+              'Dalam perjudian nyata, Anda tidak bisa mengontrol pengaturan ini dan rumah selalu menang dalam jangka panjang.',
+              style: TextStyle(color: Colors.red),
             ),
           ],
         ),
@@ -40,25 +63,9 @@ class HelpDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('MENGERTI', style: TextStyle(color: Colors.red.shade900)),
+          child: const Text('Mengerti!'),
         ),
       ],
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-    );
-  }
-
-  Widget _buildHelpItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• '),
-          Expanded(child: Text(text)),
-        ],
-      ),
     );
   }
 }
