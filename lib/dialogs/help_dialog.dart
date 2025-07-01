@@ -63,9 +63,13 @@ class HelpDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Mengerti!', selectionColor: Color.fromARGB(0, 255, 0, 0), ),
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.red,
+            textStyle: const TextStyle(fontSize: 16),
+          
           
         ),
+          child: const Text('Mengerti!', ),)
       ],
     );
   }
