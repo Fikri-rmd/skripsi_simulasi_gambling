@@ -22,11 +22,11 @@ class BottomNavBar extends StatelessWidget {
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),
-          label: 'Setting',
+          label: 'Settings',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.home, size: 32),
-          label: 'Home',
+          icon: Icon(Icons.casino),
+          label: 'Game',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person),

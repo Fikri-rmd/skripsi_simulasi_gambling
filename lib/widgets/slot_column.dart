@@ -22,20 +22,21 @@ class SlotColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 100),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
       width: 70,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isWinningSymbol ? Colors.yellow : Colors.grey.shade400,
-          width: isWinningSymbol ? 3 : 2,
+          width: isWinningSymbol ? 3 : 1,
         ),
         boxShadow: isWinningSymbol
             ? [
                 BoxShadow(
                   color: Colors.yellow.withOpacity(0.6),
-                  blurRadius: 10,
+                  blurRadius: 8,
                   spreadRadius: 2
                 )
               ]
@@ -60,11 +61,11 @@ class SlotColumn extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: GameLogic.getSymbolColor(symbols[index]),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(15),
           ),
           child: Text(
             symbols[index],
-            style: const TextStyle(fontSize: 28),
+            style: const TextStyle(fontSize: 32),
           ),
         );      
       },
