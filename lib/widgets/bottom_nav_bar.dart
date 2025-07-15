@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class BottomNavBar extends StatelessWidget {
+class ModernBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
 
-  const BottomNavBar({
+  const ModernBottomNavBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
@@ -12,27 +12,40 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.red.shade900,
-      selectedItemColor: Colors.white,
-      unselectedItemColor: Colors.grey.shade300,
-      currentIndex: currentIndex,
-      onTap: onTap,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Settings',
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 0, left: 10 , right: 10),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.casino),
-          label: 'Game',
+        child: NavigationBar(
+          backgroundColor: Colors.red.shade900,
+          elevation: 8,
+          height: 70,
+          selectedIndex: currentIndex,
+          onDestinationSelected: onTap,
+          indicatorColor: Colors.black12.withOpacity(0.5),
+          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined, color: Colors.white),
+              selectedIcon: Icon(Icons.settings, color: Colors.red),
+              label: 'Settings',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.casino_outlined, color: Colors.white),
+              selectedIcon: Icon(Icons.casino, color: Colors.red),
+              label: 'Game',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline, color: Colors.white),
+              selectedIcon: Icon(Icons.person, color: Colors.red),
+              label: 'Profile',
+            ),
+          ],
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Profile',
-        ),
-      ],
+      ),
     );
   }
 }

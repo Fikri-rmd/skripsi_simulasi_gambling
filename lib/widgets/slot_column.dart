@@ -26,18 +26,20 @@ class SlotColumn extends StatelessWidget {
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
       width: 70,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+      decoration: BoxDecoration(  
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isWinningSymbol ? Colors.yellow : Colors.grey.shade400,
-          width: isWinningSymbol ? 3 : 1,
+          color: isWinningSymbol ? const Color.fromARGB(255, 255, 59, 59) : Colors.grey.shade400,
+          width: isWinningSymbol ? 1 : 1,
         ),
         boxShadow: isWinningSymbol
             ? [
                 BoxShadow(
-                  color: Colors.yellow.withOpacity(0.6),
-                  blurRadius: 8,
-                  spreadRadius: 2
+                  color: const Color.fromARGB(255, 255, 0, 0).withOpacity(0.6),
+                  blurRadius: 5,
+                  spreadRadius: 5,
+                  offset: const Offset(0, 3),
+
                 )
               ]
             : null,
@@ -50,6 +52,7 @@ class SlotColumn extends StatelessWidget {
     final symbols = isRolling
         ? [...List.generate(20, (_) => GameLogic.getRandomSymbol()), finalSymbol]
         : [finalSymbol];
+    
     
     return ListView.builder(
       controller: controller,

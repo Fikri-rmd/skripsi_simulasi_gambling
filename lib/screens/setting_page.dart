@@ -77,7 +77,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
             _buildSpinSetting(),
             
             const SizedBox(height: 10),
-            _buildSectionHeader('Persentase Kemenangan per Simbol'),
+            _buildSectionHeader('Persentase Kemunculan per Simbol'),
             ..._buildSymbolSettings(),
             
             // Tombol simpan di bagian bawah
@@ -216,10 +216,10 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
                   });
                 },
               ),
-              // Text(
-              //   '${(entry.value * 100).toStringAsFixed(1)}%',
-              //   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              // ),
+              Text(
+                '${(entry.value * 100).toStringAsFixed(1)}%',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 10),
               const Text(
                 '0% = tidak pernah muncul | 100% = selalu muncul',

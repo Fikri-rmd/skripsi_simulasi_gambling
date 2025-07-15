@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:simulasi_slot/dialogs/help_dialog.dart';
 import 'package:simulasi_slot/dialogs/reset_dialog.dart';
 import 'package:simulasi_slot/dialogs/win_loss_dialog.dart';
@@ -27,6 +28,7 @@ class SlotGameScreen extends StatefulWidget {
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
+  late List<List<String>> _currentSymbols; // di State
   final Set<Point<int>> _winningPositions = {}; // gunakan dart:math Point
   bool _animateAll = false;
   List<WinLine> _winLines = [];
@@ -173,6 +175,8 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _isSpinning = true;
       _resetSymbolCounts();
       _winLines = []; 
+      _animateAll = true;
+  
     });
 
     // Handle khusus untuk winPercentage 0%
@@ -238,10 +242,14 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     List<Future> animations = [];
     for (int row = 0; row < 4; row++) {
       for (int col = 0; col < 4; col++) {
+         final delay = (row * 4 + col) * 100;
+
+        animations.add(Future.delayed(Duration(milliseconds: delay), () {
         final isForceWinCell = isForceWinNeeded && 
         GameLogic.isInForceWinPattern(row, col, forceWinType, forceWinPosition);
         final cellSymbol = isForceWinCell ? forceWinSymbol! : newSymbols[row][col];
         animations.add(_startRollingAnimation(row, col, cellSymbol,applyForceWin: isForceWinCell));
+      }));
       }
     }
     
@@ -256,7 +264,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         }
       }
     }
-    
+     // di State
     setState(() {
       _rows = newSymbols;
       // _checkWin();
@@ -267,7 +275,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _checkWin();
     }
 
-  }
+}
 
   // Fungsi untuk memastikan tidak ada pola menang
 void _breakWinningPatterns(List<List<String>> symbols) {
@@ -308,33 +316,58 @@ void _breakWinningPatterns(List<List<String>> symbols) {
 }
 
   Future<void> _startRollingAnimation(int row, int col, String finalSymbol, {bool applyForceWin = false}) async {
-    setState(() => _isRolling[row][col] = true);
-    
-    List<String> rollingSymbols = List.generate(20, (_) => GameLogic.getRandomSymbol());
-    // Apply forced win in the middle of animation
-    if (applyForceWin) {
-      // Replace symbols in the middle of the animation
-      for (int i = 10; i < 15; i++) {
-        rollingSymbols[i] = finalSymbol;
-      }
+  // 1. Set status rolling = true
+  setState(() => _isRolling[row][col] = true);
+  
+  // 2. Siapkan simbol-simbol acak (30 simbol)
+  List<String> rollingSymbols = List.generate(30, (_) => GameLogic.getRandomSymbol());
+  
+  // 3. Jika perlu paksa kemenangan, ganti simbol di tengah animasi
+  if (applyForceWin) {
+    for (int i = 10; i < 15; i++) {
+      rollingSymbols[i] = finalSymbol;
+      _scrollControllers[row][col].jumpTo(0.0);
     }
-    rollingSymbols.add(finalSymbol);
-    
-    const double itemHeight = 70.0;
-    final double targetOffset = rollingSymbols.length * itemHeight;
-    
-    final completer = Completer<void>();
-    _scrollControllers[row][col].animateTo(
-      targetOffset,
-      duration: const Duration(milliseconds: 1500),
-      curve: Curves.easeOut,
-    ).then((_) {
-      setState(() => _isRolling[row][col] = false);
-      completer.complete();
-    });
-    
-    return completer.future;
   }
+  
+  // 4. Tambahkan simbol akhir
+  rollingSymbols.add(finalSymbol);
+  
+  // 5. Reset scroll position ke atas
+  _scrollControllers[row][col].jumpTo(0.0);
+  
+  // 6. Hitung posisi scroll
+  const double itemHeight = 70.0;
+  final double targetOffset = rollingSymbols.length * itemHeight;
+  
+  // 7. Fase animasi cepat (5000ms)
+  final visibleCount = 3;
+  final fastOffset = (rollingSymbols.length - visibleCount - 2) * itemHeight;
+  
+  // 8. Animasi cepat ke posisi hampir akhir
+  await _scrollControllers[row][col].animateTo(
+    fastOffset,
+    duration: const Duration(milliseconds: 5000),
+    curve: Curves.easeOut,
+  );
+  
+  // 9. Fase animasi lambat (800ms)
+  final slowOffset = rollingSymbols.length * itemHeight;
+  await _scrollControllers[row][col].animateTo(
+    slowOffset,
+    duration: const Duration(milliseconds: 5000),
+    curve: Curves.decelerate,
+  );
+  
+  // 10. Set status rolling = false saat selesai
+  _scrollControllers[row][col].animateTo(
+    targetOffset,
+    duration: const Duration(milliseconds: 5000),
+    curve: Curves.decelerate,
+  ).then((_) {
+    setState(() => _isRolling[row][col] = false);
+  });
+}
 
   void _checkWin() async {
   // Cek apakah spin ini memenuhi syarat untuk bisa menang
@@ -412,7 +445,7 @@ void _breakWinningPatterns(List<List<String>> symbols) {
       }
       setState(() => _rows = newRows);
       // Beri sedikit delay untuk animasi
-      await Future.delayed(const Duration(milliseconds: 300));
+      await Future.delayed(const Duration(milliseconds: 5000));
 
       // Hitung ulang winLines dengan pola baru
     }}
@@ -425,7 +458,7 @@ void _breakWinningPatterns(List<List<String>> symbols) {
         _animateAll = true;
         
       });
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 2400));
       setState(() {
         _animateAll = false;
         
@@ -630,7 +663,7 @@ void _breakWinningPatterns(List<List<String>> symbols) {
           const ProfilePage()
         ],
       ),
-      bottomNavigationBar: BottomNavBar(
+      bottomNavigationBar: ModernBottomNavBar(
         currentIndex: _currentNavIndex,
         onTap: _handleNavTap,
       ),

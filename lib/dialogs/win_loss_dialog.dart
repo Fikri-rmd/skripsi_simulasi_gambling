@@ -18,7 +18,7 @@ class WinLossDialog extends StatelessWidget {
           Icon(isWin ? Icons.celebration : Icons.warning,
               color: isWin ? Colors.green : Colors.red),
           const SizedBox(width: 10),
-          Text(isWin ? 'Menang!' : 'Kalah Lagi'),
+          Text(isWin ? 'Menang!' : 'Kalah '),
         ],
       ),
       content: Text(message),
