@@ -2,7 +2,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class WinLine {
   final String lineType;
   final String symbol;
@@ -30,9 +29,9 @@ class WinLine {
 }
 
 class GameSettings {
-  double winPercentage;  // Persentase kemenangan umum
-  int minSpinToWin;      // Spin minimum untuk mulai memberikan kemenangan
-  Map<String, double> symbolRates; // Probabilitas munculnya simbol
+  double winPercentage;
+  int minSpinToWin;
+  Map<String, double> symbolRates;
 
   GameSettings({
     required this.winPercentage,
@@ -40,12 +39,23 @@ class GameSettings {
     required this.symbolRates,
   });
 
+  void validateSymbolRates() {
+    final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
+    if (total != 1.0) {
+      final newRates = <String, double>{};
+      symbolRates.forEach((symbol, rate) {
+        newRates[symbol] = rate / total;
+      });
+      symbolRates = newRates;
+    }
+  }
+
   Future<void> saveToPrefs() async {
+    validateSymbolRates();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('winPercentage', winPercentage);
     await prefs.setInt('minSpinToWin', minSpinToWin);
     
-    // Simpan setiap simbol
     for (var entry in symbolRates.entries) {
       await prefs.setDouble('symbol_${entry.key}', entry.value);
     }
@@ -56,17 +66,9 @@ class GameSettings {
     double winPercentage = prefs.getDouble('winPercentage') ?? 0.5;
     int minSpinToWin = prefs.getInt('minSpinToWin') ?? 5;
     
-    // Default rates
     Map<String, double> defaultRates = {
-      '🍒': 0.40,
-      '🍋': 0.30,
-      '💎': 0.10,
-      '💰': 0.10,
-      '🍊': 0.30,
-      '🔔': 0.25,
-      '🎲': 0.30,
-      '🥇': 0.25,
-      '🍇': 0.35,
+      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
+      '🍊': 0.15, '🔔': 0.20, '🎲': 0.25, '🥇': 0.30, '🍇': 0.30,
     };
     
     Map<String, double> symbolRates = {};
@@ -78,6 +80,18 @@ class GameSettings {
       winPercentage: winPercentage,
       minSpinToWin: minSpinToWin,
       symbolRates: symbolRates,
+    )..validateSymbolRates();
+  }
+
+  GameSettings copyWith({
+    double? winPercentage,
+    int? minSpinToWin,
+    Map<String, double>? symbolRates,
+  }) {
+    return GameSettings(
+      winPercentage: winPercentage ?? this.winPercentage,
+      minSpinToWin: minSpinToWin ?? this.minSpinToWin,
+      symbolRates: symbolRates ?? Map.from(this.symbolRates),
     );
   }
 }
@@ -88,33 +102,106 @@ class GameLogic {
     winPercentage: 0.5,
     minSpinToWin: 5,
     symbolRates: {
-      '🍒': 0.30,
-      '🍋': 0.30,
-      '💎': 0.10,
-      '💰': 0.10,
-      '🍊': 0.15,
-      '🔔': 0.20,
-      '🎲': 0.25,
-      '🥇': 0.30,
-      '🍇': 0.30,
+      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
+      '🍊': 0.15, '🔔': 0.20, '🎲': 0.25, '🥇': 0.30, '🍇': 0.30,
     },
-  );
+  )..validateSymbolRates();
 
+  // Statistik win rate
+  static int _totalSpins = 0;
+  static int _totalWins = 0;
 
+  static double get actualWinRate {
+    if (_totalSpins == 0) return 0.0;
+    return _totalWins / _totalSpins;
+  }
+
+  static void resetStats() {
+    _totalSpins = 0;
+    _totalWins = 0;
+  }
+
+  static void updateSettings(GameSettings newSettings) {
+    settings = newSettings;
+    settings.validateSymbolRates();
+  }
+
+  // Simbol dengan probabilitas 100%
+  static String? _getFullRateSymbol() {
+    for (var entry in settings.symbolRates.entries) {
+      if (entry.value == 1.0) return entry.key;
+    }
+    return null;
+  }
+
+  // Simbol dengan probabilitas tertinggi
+  static String _getHighestProbabilitySymbol() {
+    return settings.symbolRates.entries.reduce((a, b) => 
+        a.value > b.value ? a : b).key;
+  }
+
+  // Untuk kemenangan, gunakan simbol khusus
+  static String getSymbolForWin() {
+    final fullSymbol = _getFullRateSymbol();
+    return fullSymbol ?? _getHighestProbabilitySymbol();
+  }
+
+  // Generate simbol dengan mempertimbangkan probabilitas
+  static String getRandomSymbol() {
+    final fullSymbol = _getFullRateSymbol();
+    if (fullSymbol != null) return fullSymbol;
+
+    double totalWeight = settings.symbolRates.values.fold(0.0, (sum, w) => sum + w);
+    double randomNumber = _random.nextDouble() * totalWeight;
+    double cumulative = 0.0;
+    
+    for (var entry in settings.symbolRates.entries) {
+      cumulative += entry.value;
+      if (randomNumber < cumulative) {
+        return entry.key;
+      }
+    }
+    
+    return settings.symbolRates.keys.first;
+  }
+
+  // Hitung probabilitas yang disesuaikan
+  static bool shouldWin(int spinCount) {
+    if (spinCount < settings.minSpinToWin) return false;
+    
+    final adjustedProbability = _calculateAdjustedProbability();
+    return _random.nextDouble() < adjustedProbability;
+  }
+
+  static double _calculateAdjustedProbability() {
+    final highProbSymbol = _getHighestProbabilitySymbol();
+    final highProbRate = settings.symbolRates[highProbSymbol]!;
+    final boostFactor = pow(highProbRate, 2).clamp(1.0, 1.5);
+    
+    return settings.winPercentage * boostFactor;
+  }
+
+  // Generate grid simbol
+  static List<List<String>> generateSymbols() {
+    final fullSymbol = _getFullRateSymbol();
+    if (fullSymbol != null) {
+      return List.generate(4, (_) => List.filled(4, fullSymbol));
+    }
+    
+    return List.generate(4, (row) {
+      return List.generate(4, (col) => getRandomSymbol());
+    });
+  }
+
+  // Cek pola kemenangan
   static List<WinLine> checkWinLines(List<List<String>> grid) {
     List<WinLine> winLines = [];
     final baseRewards = {
-      '🍒': 3,
-      '🍋': 4,
-      '💎': 10,
-      '💰': 15,
-      '🍊': 5,
-      '🔔': 6,
-      '🎲': 7,
-      '🥇': 8,
-      '🍇': 9,
+      '🍒': 3, '🍋': 4, '💎': 10, '💰': 15,
+      '🍊': 5, '🔔': 6, '🎲': 7, '🥇': 8, '🍇': 9,
     };
-    // Cek garis horizontal
+    
+    // Horizontal
     for (int row = 0; row < 4; row++) {
       String symbol = grid[row][0];
       if (symbol == '🎰') continue;
@@ -135,7 +222,7 @@ class GameLogic {
       }
     }
    
-    // Cek garis vertikal (4 simbol)
+    // Vertical
     for (int col = 0; col < 4; col++) {
       String symbol = grid[0][col];
       if (symbol == '🎰') continue;
@@ -156,10 +243,9 @@ class GameLogic {
       }
     }
     
-    // Cek diagonal utama (kiri atas ke kanan bawah)
+    // Diagonal (top-left to bottom-right)
     String mainDiagSymbol = grid[0][0];
     bool mainDiagWin = mainDiagSymbol != '🎰';
-    // bool mainDiagWin = true;
     for (int i = 1; i < 4; i++) {
       if (grid[i][i] != mainDiagSymbol) {
         mainDiagWin = false;
@@ -175,10 +261,9 @@ class GameLogic {
       ));
     }
     
-    // Cek diagonal sekunder (kanan atas ke kiri bawah)
+    // Diagonal (top-right to bottom-left)
     String antiDiagSymbol = grid[0][3];
     bool antiDiagWin = antiDiagSymbol != '🎰';
-    if (antiDiagWin){
     for (int i = 1; i < 4; i++) {
       if (grid[i][3-i] != antiDiagSymbol) {
         antiDiagWin = false;
@@ -193,134 +278,46 @@ class GameLogic {
         reward: baseRewards[antiDiagSymbol]! * 4,
       ));
     }
-  }
-  return winLines;
-}
-  
-
-  // Update settings
-  static void updateSettings(GameSettings newSettings) {
-    settings = newSettings;
+    
+    return winLines;
   }
 
-  // Get random symbol berdasarkan probabilitas
-  static String getRandomSymbol() {
-    // Hanya gunakan simbol dengan persentase >0%
-    Map<String, double> activeSymbols = {};
-    settings.symbolRates.forEach((symbol, rate) {
-      if (rate > 0) {
-        activeSymbols[symbol] = rate;
-      }});
-    
-    // Hitung total weight
-    double totalWeight = settings.symbolRates.values.fold(0.0, (sum, weight) => sum + weight);
-    
-    double randomNumber = _random.nextDouble() * totalWeight;
-    double cumulative = 0.0;
-    if (totalWeight <= 0) {
-      return '🎰'; // Simbol default
-    }
-    
-    for (var entry in settings.symbolRates.entries) {
-      cumulative += entry.value;
-      if (randomNumber < cumulative) {
-        return entry.key;
-      }
-    }
-    return '🎰'; 
-    // return settings.symbolRates.keys.first;
-  }
+  // Untuk memaksa kemenangan dengan pola tertentu
   static List<List<String>> generateForcedWinPattern(
-    List<List<String>> currentRows,
     String winSymbol,
     String winType,
-    int position
+    int position,
   ) {
-    final newRows = currentRows.map((row) => List<String>.from(row)).toList();
+    final newGrid = List.generate(4, (row) => List.generate(4, (col) => getRandomSymbol()));
 
     switch (winType) {
       case 'horizontal':
         for (int col = 0; col < 4; col++) {
-          newRows[position][col] = winSymbol;
+          newGrid[position][col] = winSymbol;
         }
         break;
       case 'vertical':
         for (int row = 0; row < 4; row++) {
-          newRows[row][position] = winSymbol;
+          newGrid[row][position] = winSymbol;
         }
         break;
       case 'diagonal':
-        if (position == 0) { // Down-right diagonal
+        if (position == 0) {
           for (int i = 0; i < 4; i++) {
-            newRows[i][i] = winSymbol;
+            newGrid[i][i] = winSymbol;
           }
-        } else { // Down-left diagonal
+        } else {
           for (int i = 0; i < 4; i++) {
-            newRows[i][3 - i] = winSymbol;
+            newGrid[i][3 - i] = winSymbol;
           }
         }
         break;
     }
-    return newRows;
-  }
-  static List<List<String>> generateSymbols() {
-    return List.generate(4, (row) {
-      return List.generate(4, (col) {
-        String symbol;
-        int attempt = 0;
-        do{
-          symbol = getRandomSymbol();
-          attempt++;
-          // Batasi percobaan untuk menghindari loop tak berujung
-          if (attempt > 50) return '🎰'; 
-        } while(!_isSymbolAllowed(symbol));
-        return symbol;
-      }
-      // } => getRandomSymbol());
-   );});
+    
+    return newGrid;
   }
 
-  static bool _isSymbolAllowed(String symbol) {
-    // Dapatkan batas maksimum untuk simbol ini
-    final maxCount = _getMaxCountForSymbol(symbol);
-    
-    // Jika tidak ada batas, selalu diizinkan
-    if (maxCount == null) return true;
-    
-  
-    return true; // Implementasi nyata memerlukan state management
-    
-    
-  }
-  static int? _getMaxCountForSymbol(String symbol) {
-    // Batas maksimum kemunculan berdasarkan kombinasi pemenang
-    final Map<String, int> maxCounts = {
-      '🍒': 6,
-      '🍋': 5,
-      '💎': 4,
-      '💰': 3,
-      '🍊': 5,
-      '🔔': 5,
-      '🎲': 5,
-      '🥇': 5,
-      '🍇': 5,
-    };
-    
-    return maxCounts[symbol];
-  }
-
-
-  // Cek apakah spin ini menghasilkan kemenangan
-  static bool shouldWin(int spinCount) {
-    // Jika winPercentage 0%, tidak pernah menang
-    if (settings.winPercentage == 0.0) return false;
-    // Hanya berpeluang menang jika sudah mencapai spin minimum
-    if (spinCount < settings.minSpinToWin) return false;
-    
-    return _random.nextDouble() < settings.winPercentage;
-  }
-  
-
+  // Warna latar untuk simbol
   static Color getSymbolColor(String symbol) {
     switch (symbol) {
       case '🍒': return Colors.pink.shade100;
@@ -336,6 +333,24 @@ class GameLogic {
     }
   }
 
+  // Update statistik setelah spin
+  static void updateStats(bool won) {
+    _totalSpins++;
+    if (won) _totalWins++;
+  }
+
+  static void resetSettings() {
+    settings = GameSettings(
+      winPercentage: 0.5,
+      minSpinToWin: 5,
+      symbolRates: {
+        '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
+        '🍊': 0.15, '🔔': 0.20, '🎲': 0.25, '🥇': 0.30, '🍇': 0.30,
+      },
+    )..validateSymbolRates();
+  }
+
+  // Helper untuk UI
   static bool isInForceWinPattern(int row, int col, String? winType, int? position) {
     if (winType == null || position == null) return false;
 
@@ -345,32 +360,10 @@ class GameLogic {
       case 'vertical':
         return col == position;
       case 'diagonal':
-        if (position == 0) { // Down-right diagonal
-          return row == col;
-        } else { // Down-left diagonal
-          return row + col == 3; // Assuming 4 rows/columns
-        }
+        if (position == 0) return row == col;
+        return row + col == 3;
       default:
         return false;
     }
   }
-
-  static void resetSettings() {
-    settings = GameSettings(
-      winPercentage: 0.5,
-      minSpinToWin: 5,
-      symbolRates : {
-        '🍒': 0.30,
-      '🍋': 0.30,
-      '💎': 0.10,
-      '💰': 0.10,
-      '🍊': 0.15,
-      '🔔': 0.20,
-      '🎲': 0.25,
-      '🥇': 0.30,
-      '🍇': 0.30,
-  }
-    );
-  }
-
-}
+}                     

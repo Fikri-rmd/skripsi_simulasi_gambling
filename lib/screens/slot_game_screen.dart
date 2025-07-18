@@ -1,9 +1,10 @@
-// ignore_for_file: unused_field
+// ignore_for_file: unused_field, avoid_print
 
 import 'dart:async';
 import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:simulasi_slot/dialogs/help_dialog.dart';
 import 'package:simulasi_slot/dialogs/reset_dialog.dart';
 import 'package:simulasi_slot/dialogs/win_loss_dialog.dart';
@@ -13,60 +14,33 @@ import 'package:simulasi_slot/services/user_service.dart';
 import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:simulasi_slot/widgets/bottom_nav_bar.dart';
 import 'package:simulasi_slot/widgets/slot_machine.dart';
-import 'package:flutter/material.dart';
-// ignore: unused_import
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class SlotGameScreen extends StatefulWidget {
   final bool isGuest;
   const SlotGameScreen({super.key, this.isGuest = false});
-  
+
   @override
   State<SlotGameScreen> createState() => _SlotGameScreenState();
 }
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
-  late List<List<String>> _currentSymbols; // di State
-  final Set<Point<int>> _winningPositions = {}; // gunakan dart:math Point
+  final Set<Point<int>> _winningPositions = {};
   bool _animateAll = false;
   List<WinLine> _winLines = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  Map<String,int> _symbolCounts = {};
-  int _currentSpin = 0;
-  List<List<String>> _rows = List.generate(4, (_) => List.filled(4, '🎰'));
   int _spinCount = 0;
   bool _isSpinning = false;
   int _currentNavIndex = 1;
   late PageController _pageController;
   List<List<ScrollController>> _scrollControllers = [];
   List<List<bool>> _isRolling = [];
+  int _winCount = 0; // Untuk statistik
 
-
-  Future<void> _saveGameHistory(bool isWin, int amount, String details) async {
-    if (widget.isGuest) return; // Skip untuk guest
-    
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      await _firestore.collection('users').doc(user.uid).collection('gameHistory').add({
-        'result': isWin ? 'Menang' : 'Kalah',
-        'coin': amount,
-        'date': DateTime.now(),
-        'details': details,
-        'winPercentage': GameLogic.settings.winPercentage,
-        'minSpin': GameLogic.settings.minSpinToWin,
-      });
-    } catch (e) {
-      print('Error saving game history: $e');
-    }
-  }
   @override
   void initState() {
     super.initState();
-    _resetSymbolCounts();
     _initUserData();
     _pageController = PageController(initialPage: _currentNavIndex);
     if (widget.isGuest) {
@@ -75,72 +49,36 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
           const SnackBar(
             content: Text('Anda masuk dalam mode tamu. Data tidak akan disimpan.'),
             duration: Duration(seconds: 3),
-          ),
-        );
+         ) );
       });
     }
     _initScrollControllers();
     _loadSettings();
   }
-  void _resetSymbolCounts() {
-    _symbolCounts = {
-      '🍒': 0,
-      '🍋': 0,
-      '💎': 0,
-      '💰': 0,
-      '🍊': 0,
-      '🔔': 0,
-      '🎲': 0,
-      '🥇': 0,
-      '🍇': 0,
-      '🎰': 0,
-    };
-  }
 
   void _initScrollControllers() {
-    _scrollControllers = [];
-    _isRolling = [];
-    for (int i = 0; i < 4; i++) {
-      List<ScrollController> rowControllers = [];
-      List<bool> rowRolling = [];
-      for (int j = 0; j < 4; j++) {
-        rowControllers.add(ScrollController());
-        rowRolling.add(false);
-      }
-      _scrollControllers.add(rowControllers);
-      _isRolling.add(rowRolling);
-    }
+    _scrollControllers = List.generate(4, (i) => List.generate(4, (j) => ScrollController()));
+    _isRolling = List.generate(4, (i) => List.generate(4, (j) => false));
   }
 
   Future<void> _initUserData() async {
-  if (widget.isGuest) return;
-  
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) return;
+    if (widget.isGuest) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  // Cek apakah user sudah ada di database
-  final doc = await FirebaseFirestore.instance
-      .collection('users')
-      .doc(user.uid)
-      .get();
-
-  if (!doc.exists) {
-    // Simpan data baru jika belum ada
-    await UserService.saveUserData(
-      userId: user.uid,
-      nama: user.displayName ?? '',
-      email: user.email ?? '',
-    );
-  } else {
-    // Update last login jika sudah ada
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .update({
-      'lastLogin': FieldValue.serverTimestamp(),
-    });
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    if (!doc.exists) {
+      await UserService.saveUserData(
+        userId: user.uid,
+        nama: user.displayName ?? '',
+        email: user.email ?? '',
+      );
+    } else {
+      await _firestore.collection('users').doc(user.uid).update({
+        'lastLogin': FieldValue.serverTimestamp(),
+      });
+    }
   }
-}
 
   Future<void> _loadSettings() async {
     final settings = await GameSettings.loadFromPrefs();
@@ -151,11 +89,10 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     setState(() {
       _coins = 500;
       _spinCount = 0;
+      _winCount = 0;
       _rows = List.generate(4, (_) => List.filled(4, '🎰'));
       _initScrollControllers();
-      _resetSymbolCounts();
       _isSpinning = false;
-      _currentSpin = 0;
       _winLines = [];
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -165,170 +102,88 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       );
     });
   }
+
+  List<List<String>> _rows = List.generate(4, (_) => List.filled(4, '🎰'));
+
   Future<void> _spin() async {
     if (_coins < 10 || _isSpinning) return;
 
     setState(() {
       _coins -= 10;
       _spinCount++;
-      _currentSpin++;
       _isSpinning = true;
-      _resetSymbolCounts();
-      _winLines = []; 
-      _animateAll = true;
-  
+      _winLines = [];
     });
-
-    // Handle khusus untuk winPercentage 0%
-    bool isZeroWinMode = GameLogic.settings.winPercentage == 0.0;
 
     // Generate new symbols
     List<List<String>> newSymbols = GameLogic.generateSymbols();
-    
-    // Pastikan tidak ada garis menang jika winPercentage 0%
-  if (isZeroWinMode) {
-    _breakWinningPatterns(newSymbols);
-  }
-    // final newSymbols = GameLogic.generateSymbols();
+
     // Check if we need to force a win
     bool shouldWinThisSpin = GameLogic.shouldWin(_spinCount);
-    bool isForceWinNeeded = shouldWinThisSpin;
     String? forceWinSymbol;
     String? forceWinType;
     int? forceWinPosition;
-    if (shouldWinThisSpin && _winLines.isEmpty) {
-  // Paksa kemenangan jika belum ada garis menang alami
-  final winTypes = ['horizontal', 'vertical', 'diagonal'];
-  forceWinType = winTypes[Random().nextInt(winTypes.length)];
-  
-  // Pilih simbol aktif secara acak
-  List<String> activeSymbols = [];
-  GameLogic.settings.symbolRates.forEach((symbol, rate) {
-    if (rate > 0) activeSymbols.add(symbol);
-  });
-  
-  if (activeSymbols.isNotEmpty) {
-    forceWinSymbol = activeSymbols[Random().nextInt(activeSymbols.length)];
-    // ... (tentukan forceWinPosition)
-  }
-}
-     if (isForceWinNeeded) {
+
+    if (shouldWinThisSpin) {
+      forceWinSymbol = GameLogic.getSymbolForWin();
       final winTypes = ['horizontal', 'vertical', 'diagonal'];
       forceWinType = winTypes[Random().nextInt(winTypes.length)];
       
-      // Get active symbols
-      List<String> activeSymbols = [];
-      GameLogic.settings.symbolRates.forEach((symbol, rate) {
-        if (rate > 0) activeSymbols.add(symbol);
-      });
-    if (activeSymbols.isNotEmpty) {
-        forceWinSymbol = activeSymbols[Random().nextInt(activeSymbols.length)];
-        
-        // Determine position based on type
-        switch (forceWinType) {
-          case 'horizontal':
-            forceWinPosition = Random().nextInt(4);
-            break;
-          case 'vertical':
-            forceWinPosition = Random().nextInt(4);
-            break;
-          case 'diagonal':
-            forceWinPosition = Random().nextInt(2); // 0 = down-right, 1 = down-left
-            break;
-        }
+      switch (forceWinType) {
+        case 'horizontal':
+          forceWinPosition = Random().nextInt(4);
+          break;
+        case 'vertical':
+          forceWinPosition = Random().nextInt(4);
+          break;
+        case 'diagonal':
+          forceWinPosition = Random().nextInt(2); // 0 = down-right, 1 = down-left
+          break;
       }
-    }
 
-    List<Future> animations = [];
-    for (int row = 0; row < 4; row++) {
-      for (int col = 0; col < 4; col++) {
-         final delay = (row * 4 + col) * 100;
-
-        animations.add(Future.delayed(Duration(milliseconds: delay), () {
-        final isForceWinCell = isForceWinNeeded && 
-        GameLogic.isInForceWinPattern(row, col, forceWinType, forceWinPosition);
-        final cellSymbol = isForceWinCell ? forceWinSymbol! : newSymbols[row][col];
-        animations.add(_startRollingAnimation(row, col, cellSymbol,applyForceWin: isForceWinCell));
-      }));
-      }
-    }
-    
-    await Future.wait(animations);
-
-      if (isForceWinNeeded && forceWinSymbol != null && forceWinType != null && forceWinPosition != null) {
-      for (int row = 0; row < 4; row++) {
-        for (int col = 0; col < 4; col++) {
-          if (GameLogic.isInForceWinPattern(row, col, forceWinType, forceWinPosition)) {
-            newSymbols[row][col] = forceWinSymbol;
+      // Apply forced win pattern
+      for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < 4; c++) {
+          if (GameLogic.isInForceWinPattern(r, c, forceWinType, forceWinPosition)) {
+            newSymbols[r][c] = forceWinSymbol;
           }
         }
       }
     }
-     // di State
+
+    // Animasi berurutan per kolom
+    List<Future> animations = [];
+    for (int row = 0; row < 4; row++) {
+      for (int col = 0; col < 4; col++) {
+        final delay = (row * 4 + col) * 100;
+        animations.add(
+          Future.delayed(
+            Duration(milliseconds: delay),
+            () => _startRollingAnimation(row, col, newSymbols[row][col]),
+         ) );
+      }
+    }
+
+    await Future.wait(animations);
+
     setState(() {
       _rows = newSymbols;
-      // _checkWin();
       _isSpinning = false;
     });
+
+    // Cek kemenangan setelah animasi selesai
     await Future.delayed(const Duration(milliseconds: 1000));
-    if(mounted){
+    if (mounted) {
       _checkWin();
     }
+  }
 
-}
-
-  // Fungsi untuk memastikan tidak ada pola menang
-void _breakWinningPatterns(List<List<String>> symbols) {
-  // ignore: unused_local_variable
-  final random = Random();
-  
-  // Cek dan ubah pola horizontal
-  for (int row = 0; row < 4; row++) {
-    if (symbols[row][0] == symbols[row][1] && 
-        symbols[row][1] == symbols[row][2] &&
-        symbols[row][2] == symbols[row][3]) {
-      symbols[row][3] = GameLogic.getRandomSymbol();
-    }
-  }
-  
-  // Cek dan ubah pola vertikal
-  for (int col = 0; col < 4; col++) {
-    if (symbols[0][col] == symbols[1][col] && 
-        symbols[1][col] == symbols[2][col] &&
-        symbols[2][col] == symbols[3][col]) {
-      symbols[3][col] = GameLogic.getRandomSymbol();
-    }
-  }
-  
-  // Cek diagonal utama
-  if (symbols[0][0] == symbols[1][1] && 
-      symbols[1][1] == symbols[2][2] &&
-      symbols[2][2] == symbols[3][3]) {
-    symbols[3][3] = GameLogic.getRandomSymbol();
-  }
-  
-  // Cek diagonal sekunder
-  if (symbols[0][3] == symbols[1][2] && 
-      symbols[1][2] == symbols[2][1] &&
-      symbols[2][1] == symbols[3][0]) {
-    symbols[3][0] = GameLogic.getRandomSymbol();
-  }
-}
-
-  Future<void> _startRollingAnimation(int row, int col, String finalSymbol, {bool applyForceWin = false}) async {
-  // 1. Set status rolling = true
+  Future<void> _startRollingAnimation(int row, int col, String finalSymbol) async {
+    // 1. Set status rolling = true
   setState(() => _isRolling[row][col] = true);
   
   // 2. Siapkan simbol-simbol acak (30 simbol)
   List<String> rollingSymbols = List.generate(30, (_) => GameLogic.getRandomSymbol());
-  
-  // 3. Jika perlu paksa kemenangan, ganti simbol di tengah animasi
-  if (applyForceWin) {
-    for (int i = 10; i < 15; i++) {
-      rollingSymbols[i] = finalSymbol;
-      _scrollControllers[row][col].jumpTo(0.0);
-    }
-  }
   
   // 4. Tambahkan simbol akhir
   rollingSymbols.add(finalSymbol);
@@ -364,117 +219,40 @@ void _breakWinningPatterns(List<List<String>> symbols) {
     targetOffset,
     duration: const Duration(milliseconds: 5000),
     curve: Curves.decelerate,
-  ).then((_) {
-    setState(() => _isRolling[row][col] = false);
-  });
-}
-
-  void _checkWin() async {
-  // Cek apakah spin ini memenuhi syarat untuk bisa menang
-  await Future.delayed(const Duration(milliseconds: 50));
-  bool canWin = _currentSpin >= GameLogic.settings.minSpinToWin;
-
-  if (GameLogic.settings.winPercentage == 0.0) {
-    _saveGameHistory(false, -10, "Mode 0%: Tidak ada kemenangan yang mungkin");
-    _showMessage(
-      'Mode 0% aktif: Tidak ada kemenangan yang mungkin\n'
-      'Simbol muncul sesuai pengaturan, tetapi tidak akan membentuk garis menang',
-      isWin: false,
-    );
-    return;
-  }
-  if (!canWin) {
-    _winLines = GameLogic.checkWinLines(_rows);
-    String lossMessage = 'Spin minimum belum tercapai (${GameLogic.settings.minSpinToWin})\nSaldo: $_coins';
-    if (_spinCount % 5 == 0) {
-      lossMessage += '\n\nℹ️ Anda perlu ${GameLogic.settings.minSpinToWin} spin untuk mulai mendapatkan kemenangan';
-    }
-    _saveGameHistory(false, -10, lossMessage);
-    _showMessage(lossMessage, isWin: false);
-    return;
-    
-  }
-    _winLines = GameLogic.checkWinLines(_rows);
-    
-    int totalReward = 0;
-    
-    bool forceWin = GameLogic.settings.winPercentage == 1.0;
-    // Jika winPercentage 100% dan tidak ada garis menang alami, buat garis menang paksa
-  if (forceWin && _winLines.isEmpty) {
-    // Pilih simbol acak yang aktif
-    final winTypes = ['horizontal', 'vertical', 'diagonal'];
-    final random = Random();
-    final selectedType = winTypes[random.nextInt(winTypes.length)];
-
-    List<String> activeSymbols = [];
-    GameLogic.settings.symbolRates.forEach((symbol, rate) {
-      if (rate > 0) activeSymbols.add(symbol);
+  ).then((_)  async {
+    await Future.delayed(const Duration(milliseconds: 10));
+    setState(() {
+      _scrollControllers[row][col].jumpTo(0.0); // Reset scroll ke atas
+      _rows[row][col] = finalSymbol; // Update simbol akhir
+      _isRolling[row][col] = false;
     });
-    
-    if (activeSymbols.isNotEmpty) {
-      String winSymbol = activeSymbols[Random().nextInt(activeSymbols.length)];
-      final newRows = List<List<String>>.from(_rows);
+  });
 
-      switch (selectedType) {
-        case 'horizontal':
-          final rowIdx = random.nextInt(4);
-          for (int col = 0; col < 4; col++) {
-            newRows[rowIdx][col] = winSymbol;
-          }
-          break;
 
-        case 'vertical':
-          final colIdx = random.nextInt(4);
-          for (int row = 0; row < 4; row++) {
-            newRows[row][colIdx] = winSymbol;
-          }
-          break;
+    // setState(() => _isRolling[row][col] = false);
+  }
 
-        case 'diagonal':
-          final direction = random.nextBool() ? 'down-right' : 'down-left';
-          if (direction == 'down-right') {
-            for (int i = 0; i < 4; i++) {
-              newRows[i][i] = winSymbol;
-            }
-          } else {
-            for (int i = 0; i < 4; i++) {
-              newRows[i][3 - i] = winSymbol;
-            }
-          }
-          break;
-      }
-      setState(() => _rows = newRows);
-      // Beri sedikit delay untuk animasi
-      await Future.delayed(const Duration(milliseconds: 5000));
+  void _checkWin() {
+    _winLines = GameLogic.checkWinLines(_rows);
+    bool won = _winLines.isNotEmpty;
 
-      // Hitung ulang winLines dengan pola baru
-    }}
-      _winLines = GameLogic.checkWinLines(_rows);
-     if (_winLines.isNotEmpty) {
-      for (var line in _winLines) {
-        totalReward += line.reward;
-      }
+    // Update statistik
+    if (won) {
+      _winCount++;
+      int totalReward = _winLines.fold(0, (sum, line) => sum + line.reward);
       setState(() {
-        _animateAll = true;
-        
-      });
-      await Future.delayed(const Duration(milliseconds: 2400));
-      setState(() {
-        _animateAll = false;
-        
-      });
-     setState(() {
         _coins += totalReward;
       });
+
       // Format detail kemenangan
       String details = _winLines.map((line) {
         String position = "";
         switch (line.lineType) {
           case 'horizontal':
-            position = "Baris ${line.row! + 1} kolom 1-4";
+            position = "Baris ${line.row! + 1}";
             break;
           case 'vertical':
-            position = "Kolom ${line.col! + 1} baris 1-4";
+            position = "Kolom ${line.col! + 1}";
             break;
           case 'diagonal':
             position = "Diagonal ${line.direction == 'down-right' ? 'kiri-kanan' : 'kanan-kiri'}";
@@ -482,12 +260,9 @@ void _breakWinningPatterns(List<List<String>> symbols) {
         }
         return "4x ${line.symbol} ($position) → +${line.reward}";
       }).join("\n");
-      _saveGameHistory(true, totalReward,
-        "Spin: $_spinCount | Kemenangan: +$totalReward Koin\n$details");
-      _showMessage(
-        "Kemenangan: +$totalReward Koin\n$details",
-        isWin: true,
-      );
+
+      _saveGameHistory(true, totalReward, "Spin: $_spinCount | Kemenangan: +$totalReward Koin\n$details");
+      _showMessage("Kemenangan: +$totalReward Koin\n$details", isWin: true);
     } else {
       _saveGameHistory(false, -10, "Tidak ada kombinasi pemenang");
       _showMessage(
@@ -496,7 +271,29 @@ void _breakWinningPatterns(List<List<String>> symbols) {
         isWin: false,
       );
     }
-}
+
+    // Update kalibrasi AI
+    GameLogic.updateStats(won);
+  }
+
+  Future<void> _saveGameHistory(bool isWin, int amount, String details) async {
+    if (widget.isGuest) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      await _firestore.collection('users').doc(user.uid).collection('gameHistory').add({
+        'result': isWin ? 'Menang' : 'Kalah',
+        'coin': amount,
+        'date': DateTime.now(),
+        'details': details,
+        'winPercentage': GameLogic.settings.winPercentage,
+        'minSpin': GameLogic.settings.minSpinToWin,
+      });
+    } catch (e) {
+      print('Error saving game history: $e');
+    }
+  }
 
   void _showMessage(String message, {required bool isWin}) {
     showDialog(
@@ -522,10 +319,34 @@ void _breakWinningPatterns(List<List<String>> symbols) {
     });
   }
 
-
   Widget _buildSlotScreen() {
+    double targetWinRate = GameLogic.settings.winPercentage;
+    double actualWinRate = _spinCount > 0 ? _winCount / _spinCount : 0.0;
+
     return Column(
       children: [
+        // Statistik win rate
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Target: ${(targetWinRate * 100).toStringAsFixed(1)}%'),
+                  Text('Aktual: ${(actualWinRate * 100).toStringAsFixed(1)}%'),
+                ],
+              ),
+              LinearProgressIndicator(
+                value: actualWinRate,
+                minHeight: 6,
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  _getWinRateColor(actualWinRate, targetWinRate),
+                ),
+           ) ],
+          ),
+        ),
         Expanded(
           child: SingleChildScrollView(
             child: Center(
@@ -564,61 +385,62 @@ void _breakWinningPatterns(List<List<String>> symbols) {
             '• JUDI MENYEBABKAN KETERGANTUNGAN, MASALAH KEUANGAN, DAN KERETAKAN KELUARGA',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.red, fontSize: 12),
-            
           ),
-        
-        ),const SizedBox(height: 5),
-        ElevatedButton(
-              onPressed: () => _showEducationalDialog(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade700,
-                foregroundColor: Colors.white,
-                
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-              ),
-              child: const Text('BACA LEBIH LANJUT'),
-    ),],
-    );
-  }
-  void _showEducationalDialog() {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('EDUKASI ANTI JUDI', style: TextStyle(color: Colors.red)),
-      content: const SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'FAKTA TENTANG PERJUDIAN:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Text('• 99% pemain judi mengalami kerugian finansial jangka panjang'),
-            Text('• Mesin slot dirancang dengan "Return to Player" (RTP) di bawah 100%, artinya pemain selalu dirugikan dalam jangka panjang'),
-            Text('• Semakin sering bermain, semakin besar kemungkinan kalah karena algoritma house edge'),
-            SizedBox(height: 20),
-            Text(
-              'BAHAYA PERJUDIAN:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            Text('• Kecanduan judi bisa menyebabkan gangguan mental'),
-            Text('• Banyak kasus perceraian dan masalah keluarga akibat judi'),
-            Text('• 1 dari 5 pecandu judi mencoba bunuh diri'),
-            SizedBox(height: 20),
-          ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('MENGERTI',selectionColor: Colors.red, style: TextStyle(color: Colors.red),)
+        const SizedBox(height: 5),
+        ElevatedButton(
+          onPressed: _showEducationalDialog,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red.shade700,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+          ),
+          child: const Text('BACA LEBIH LANJUT'),
         ),
       ],
-    ),
-  );
-}
+    );
+  }
+
+  Color _getWinRateColor(double actual, double target) {
+    double diff = (actual - target).abs();
+    if (diff <= 0.05) return Colors.green;
+    if (diff <= 0.1) return Colors.orange;
+    return Colors.red;
+  }
+
+  void _showEducationalDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('EDUKASI ANTI JUDI', style: TextStyle(color: Colors.red)),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('FAKTA TENTANG PERJUDIAN:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 10),
+              Text('• 99% pemain judi mengalami kerugian finansial jangka panjang'),
+              Text('• Mesin slot dirancang dengan "Return to Player" (RTP) di bawah 100%, artinya pemain selalu dirugikan dalam jangka panjang'),
+              Text('• Semakin sering bermain, semakin besar kemungkinan kalah karena algoritma house edge'),
+              SizedBox(height: 20),
+              Text('BAHAYA PERJUDIAN:', style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(height: 10),
+              Text('• Kecanduan judi bisa menyebabkan gangguan mental'),
+              Text('• Banyak kasus perceraian dan masalah keluarga akibat judi'),
+              Text('• 1 dari 5 pecandu judi mencoba bunuh diri'),
+              SizedBox(height: 20),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('MENGERTI', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -636,8 +458,7 @@ void _breakWinningPatterns(List<List<String>> symbols) {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Chip(
-                label: Text('$_coins 🪙', 
-                  style: const TextStyle(color: Colors.white)),
+                label: Text('$_coins 🪙', style: const TextStyle(color: Colors.white)),
                 backgroundColor: Colors.red.shade700,
               ),
             ),
@@ -660,7 +481,7 @@ void _breakWinningPatterns(List<List<String>> symbols) {
             initialSymbolRates: GameLogic.settings.symbolRates,
           ),
           _buildSlotScreen(),
-          const ProfilePage()
+          const ProfilePage(),
         ],
       ),
       bottomNavigationBar: ModernBottomNavBar(
