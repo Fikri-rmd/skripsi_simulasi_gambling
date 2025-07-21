@@ -33,6 +33,24 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     _minSpinToWin = widget.initialMinSpinToWin;
     _symbolRates = Map<String, double>.from(widget.initialSymbolRates);
   }
+  void _resetToDefaultSettings() {
+  setState(() {
+    _winPercentage = 0.5;
+    _minSpinToWin = 5;
+    _symbolRates = {
+      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
+      '🍊': 0.15, '🔔': 0.20, '🎲': 0.25, '🥇': 0.30, '🍇': 0.30,
+    };
+  });
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Pengaturan telah di-reset ke default.'),
+      duration: Duration(seconds: 2),
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -85,23 +103,44 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               padding: const EdgeInsets.only(top: 30, bottom: 20),
               child: Center(
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.save, size: 28),
+                  icon: const Icon(Icons.save, size: 24),
                   label: const Text('SIMPAN', 
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red.shade900,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 30),
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
+                      borderRadius: BorderRadius.circular(16)),
                   ),
                   onPressed: _saveSettings,
                 ),
               ),
             ),
-          ],
+            Padding(
+  padding: const EdgeInsets.only(bottom: 30),
+  child: Center(
+    child: ElevatedButton.icon(
+      icon: const Icon(Icons.restore, size: 24),
+      label: const Text(
+        'RESET',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.grey.shade800,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 30),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
         ),
       ),
+      onPressed: _resetToDefaultSettings,
+    ),
+  ),
+),
+                ],
+          ),
+        ),
     );
   }
 
