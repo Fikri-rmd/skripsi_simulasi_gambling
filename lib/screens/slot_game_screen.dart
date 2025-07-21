@@ -183,53 +183,33 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   setState(() => _isRolling[row][col] = true);
   
   // 2. Siapkan simbol-simbol acak (30 simbol)
-  List<String> rollingSymbols = List.generate(30, (_) => GameLogic.getRandomSymbol());
+  const int rollingItems = 30;
+  List<String> rollingSymbols = List.generate(rollingItems, (_) => GameLogic.getRandomSymbol());
   
   // 4. Tambahkan simbol akhir
   rollingSymbols.add(finalSymbol);
-  
-  // 5. Reset scroll position ke atas
-  _scrollControllers[row][col].jumpTo(0.0);
-  
-  // 6. Hitung posisi scroll
-  const double itemHeight = 70.0;
-  final double targetOffset = rollingSymbols.length * itemHeight;
-  
-  // 7. Fase animasi cepat (5000ms)
-  final visibleCount = 3;
-  final fastOffset = (rollingSymbols.length - visibleCount - 2) * itemHeight;
-  
-  // 8. Animasi cepat ke posisi hampir akhir
+
+  const double itemHeight = 70.0; 
+  final double targetOffset = (rollingSymbols.length - 1) * itemHeight;
+
+  _scrollControllers[row][col].jumpTo(0); // Reset posisi awal
+
   await _scrollControllers[row][col].animateTo(
-    fastOffset,
-    duration: const Duration(milliseconds: 5000),
-    curve: Curves.easeOut,
+    targetOffset * 0.7,
+    duration: const Duration(milliseconds: 3500),
+    curve: Curves.easeIn,
   );
-  
-  // 9. Fase animasi lambat (800ms)
-  final slowOffset = rollingSymbols.length * itemHeight;
+
   await _scrollControllers[row][col].animateTo(
-    slowOffset,
-    duration: const Duration(milliseconds: 5000),
-    curve: Curves.decelerate,
-  );
-  
-  // 10. Set status rolling = false saat selesai
-  _scrollControllers[row][col].animateTo(
     targetOffset,
-    duration: const Duration(milliseconds: 5000),
-    curve: Curves.decelerate,
-  ).then((_)  async {
-    await Future.delayed(const Duration(milliseconds: 10));
-    setState(() {
-      _scrollControllers[row][col].jumpTo(0.0); // Reset scroll ke atas
-      _rows[row][col] = finalSymbol; // Update simbol akhir
-      _isRolling[row][col] = false;
-    });
+    duration: const Duration(milliseconds: 1200),
+    curve: Curves.easeInOut,
+  );
+
+  setState(() {
+    _isRolling[row][col] = false; // Set status rolling = false
+    _rows[row][col] = finalSymbol; // Update simbol akhir
   });
-
-
-    // setState(() => _isRolling[row][col] = false);
   }
 
   void _checkWin() {
