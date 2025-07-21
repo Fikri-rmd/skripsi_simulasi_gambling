@@ -38,8 +38,8 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     _winPercentage = 0.5;
     _minSpinToWin = 5;
     _symbolRates = {
-      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
-      '🍊': 0.15, '🔔': 0.20, '🎲': 0.25, '🥇': 0.30, '🍇': 0.30,
+      '🍒': 0.30, '🍋': 0.30, '💎': 0.05, '💰': 0.05,
+      '🍊': 0.10, '🔔': 0.05, '🎲': 0.05, '🥇': 0.05, '🍇': 0.05,
     };
   });
 
@@ -251,8 +251,12 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
                 label: '${(entry.value * 100).toStringAsFixed(1)}%',
                 onChanged: (value) {
                   setState(() {
+                    if (value == 1.0) {
+        // Set simbol lain jadi 0.0
+        _symbolRates.updateAll((key, _) => key == entry.key ? 1.0 : 0.0);
+      } else {
                     _symbolRates[entry.key] = value;
-                  });
+                  }});
                 },
               ),
               Text(
@@ -295,8 +299,18 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
         ),
       );
       return;
-    }  
-    
+    }
+    final fullSymbols = _symbolRates.entries.where((e) => e.value == 1.0).toList();
+    if (fullSymbols.length > 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Hanya boleh ada 1 simbol dengan probabilitas 100%!'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;  
+    }
      // Buat objek settings baru
     final newSettings = GameSettings(
       winPercentage: _winPercentage,

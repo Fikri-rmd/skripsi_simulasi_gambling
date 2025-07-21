@@ -13,7 +13,7 @@ class ModernBottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 0, left: 10 , right: 10),
+      padding: const EdgeInsets.only(bottom: 0, left: 0 , right: 0),
       child: ClipRRect(
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(10),

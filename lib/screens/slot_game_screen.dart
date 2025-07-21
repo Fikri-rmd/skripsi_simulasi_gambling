@@ -300,33 +300,33 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   }
 
   Widget _buildSlotScreen() {
-    double targetWinRate = GameLogic.settings.winPercentage;
-    double actualWinRate = _spinCount > 0 ? _winCount / _spinCount : 0.0;
+    // double targetWinRate = GameLogic.settings.winPercentage;
+    // double actualWinRate = _spinCount > 0 ? _winCount / _spinCount : 0.0;
 
     return Column(
       children: [
-        // Statistik win rate
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Target: ${(targetWinRate * 100).toStringAsFixed(1)}%'),
-                  Text('Aktual: ${(actualWinRate * 100).toStringAsFixed(1)}%'),
-                ],
-              ),
-              LinearProgressIndicator(
-                value: actualWinRate,
-                minHeight: 6,
-                backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _getWinRateColor(actualWinRate, targetWinRate),
-                ),
-           ) ],
-          ),
-        ),
+        // // Statistik win rate
+        // Padding(
+        //   padding: const EdgeInsets.all(8.0),
+        //   child: Column(
+        //     children: [
+        //       Row(
+        //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        //         children: [
+        //           Text('Target: ${(targetWinRate * 100).toStringAsFixed(1)}%'),
+        //           Text('Aktual: ${(actualWinRate * 100).toStringAsFixed(1)}%'),
+        //         ],
+        //       ),
+        //       LinearProgressIndicator(
+        //         value: actualWinRate,
+        //         minHeight: 6,
+        //         backgroundColor: Colors.grey[300],
+        //         valueColor: AlwaysStoppedAnimation<Color>(
+        //           _getWinRateColor(actualWinRate, targetWinRate),
+        //         ),
+        //    ) ],
+        //   ),
+        // ),
         Expanded(
           child: SingleChildScrollView(
             child: Center(
@@ -381,12 +381,12 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     );
   }
 
-  Color _getWinRateColor(double actual, double target) {
-    double diff = (actual - target).abs();
-    if (diff <= 0.05) return Colors.green;
-    if (diff <= 0.1) return Colors.orange;
-    return Colors.red;
-  }
+  // Color _getWinRateColor(double actual, double target) {
+  //   double diff = (actual - target).abs();
+  //   if (diff <= 0.05) return Colors.green;
+  //   if (diff <= 0.1) return Colors.orange;
+  //   return Colors.red;
+  // }
 
   void _showEducationalDialog() {
     showDialog(
