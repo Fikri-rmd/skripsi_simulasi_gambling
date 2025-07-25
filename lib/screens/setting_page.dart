@@ -14,8 +14,10 @@ class ProbabilitySettingsPage extends StatefulWidget {
     required this.initialWinPercentage,
     required this.initialMinSpinToWin,
     required this.initialSymbolRates,
-    this.onSettingsUpdated,
+    this.onSettingsUpdated ,
   }) : super(key: key);
+
+
 
   @override
   // ignore: library_private_types_in_public_api
@@ -323,7 +325,9 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     // Simpan ke SharedPreferences
     await newSettings.saveToPrefs();
     GameLogic.updateSettings(newSettings);
-    widget.onSettingsUpdated?.call(); 
+    Future.microtask(() {
+  widget.onSettingsUpdated?.call(); // dijalankan setelah state lifecycle selesai
+});
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pengaturan berhasil disimpan!'),

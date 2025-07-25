@@ -64,6 +64,13 @@ void initState() {
   _queuedSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
   setState(() {}); // update setelah spin siap
 }
+void _handleSettingsUpdated() async {
+  final newSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
+  setState(() {
+    _queuedSpins = newSpins;
+  });
+}
+
 
   // @override
   // Future<void> initState() async {
@@ -518,11 +525,8 @@ void initState() {
             initialWinPercentage: GameLogic.settings.winPercentage,
             initialMinSpinToWin: GameLogic.settings.minSpinToWin,
             initialSymbolRates: GameLogic.settings.symbolRates,
-            onSettingsUpdated: () {
-              setState(() async {
-                _queuedSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
-            });
-            },
+            onSettingsUpdated: _handleSettingsUpdated,
+
           ),
           _buildSlotScreen(),
           const ProfilePage(),
