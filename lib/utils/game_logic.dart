@@ -80,8 +80,8 @@ class GameSettings {
     int minSpinToWin = prefs.getInt('minSpinToWin') ?? 5;
     
     Map<String, double> defaultRates = {
-      '🍒': 0.30, '🍋': 0.30, '💎': 0.05, '💰': 0.05,
-      '🍊': 0.10, '🔔': 0.05, '🎲': 0.05, '🥇': 0.05, '🍇': 0.05,
+      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
+      '🍊': 0.20,
     };
     
     Map<String, double> symbolRates = {};
@@ -115,8 +115,8 @@ class GameLogic {
     winPercentage: 0.5,
     minSpinToWin: 5,
     symbolRates: {
-      '🍒': 0.30, '🍋': 0.30, '💎': 0.05, '💰': 0.05,
-      '🍊': 0.10, '🔔': 0.05, '🎲': 0.05, '🥇': 0.05, '🍇': 0.05,
+      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
+      '🍊': 0.20,
     },
   )..validateSymbolRates();
 
@@ -281,7 +281,7 @@ class GameLogic {
     List<WinLine> winLines = [];
     final baseRewards = {
       '🍒': 3, '🍋': 4, '💎': 10, '💰': 15,
-      '🍊': 5, '🔔': 6, '🎲': 7, '🥇': 8, '🍇': 9,
+      '🍊': 5,
     };
     
     // Horizontal
@@ -408,10 +408,10 @@ class GameLogic {
       case '💎': return Colors.blue.shade100;
       case '💰': return Colors.green.shade100;
       case '🍊': return Colors.orange.shade100;
-      case '🔔': return Colors.amber.shade100;
-      case '🎲': return Colors.deepPurple.shade100;
-      case '🥇': return Colors.amber.shade300;
-      case '🍇': return Colors.purple.shade100;
+      // case '🔔': return Colors.amber.shade100;
+      // case '🎲': return Colors.deepPurple.shade100;
+      // case '🥇': return Colors.amber.shade300;
+      // case '🍇': return Colors.purple.shade100;
       default: return Colors.grey.shade200;
     }
   }
@@ -428,7 +428,7 @@ class GameLogic {
       minSpinToWin: 5,
       symbolRates: {
         '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
-        '🍊': 0.15, '🔔': 0.20, '🎲': 0.25, '🥇': 0.30, '🍇': 0.30,
+      '🍊': 0.20,
       },
     )..validateSymbolRates();
   }

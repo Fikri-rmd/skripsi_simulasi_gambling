@@ -40,8 +40,8 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     _winPercentage = 0.5;
     _minSpinToWin = 5;
     _symbolRates = {
-      '🍒': 0.30, '🍋': 0.30, '💎': 0.05, '💰': 0.05,
-      '🍊': 0.10, '🔔': 0.05, '🎲': 0.05, '🥇': 0.05, '🍇': 0.05,
+      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
+      '🍊': 0.20,
     };
   });
 

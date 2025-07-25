@@ -40,24 +40,49 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   List<List<bool>> _isRolling = [];
   int _winCount = 0; // Untuk statistik
 
+
   @override
-  void initState() {
-    super.initState();
-    _initUserData();
-    _pageController = PageController(initialPage: _currentNavIndex);
-    if (widget.isGuest) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Anda masuk dalam mode tamu. Data tidak akan disimpan.'),
-            duration: Duration(seconds: 3),
-         ) );
-      });
-    }
-    _initScrollControllers();
-    _loadSettings();
-    _queuedSpins = SpinPreparer.prepareSpins(10, GameLogic.settings);
+void initState() {
+  super.initState();
+  _initAll(); // <- async function non-await
+  _initUserData();
+  _pageController = PageController(initialPage: _currentNavIndex);
+  if (widget.isGuest) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda masuk dalam mode tamu. Data tidak akan disimpan.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    });
   }
+  _initScrollControllers();
+}
+  Future<void> _initAll() async {
+  await _loadSettings();
+  _queuedSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
+  setState(() {}); // update setelah spin siap
+}
+
+  // @override
+  // Future<void> initState() async {
+  //   super.initState();
+  //   _initUserData();
+  //   _pageController = PageController(initialPage: _currentNavIndex);
+  //   if (widget.isGuest) {
+  //     WidgetsBinding.instance.addPostFrameCallback((_) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         const SnackBar(
+  //           content: Text('Anda masuk dalam mode tamu. Data tidak akan disimpan.'),
+  //           duration: Duration(seconds: 3),
+  //        ) );
+  //     });
+  //   }
+  //   _initScrollControllers();
+  //   _loadSettings();
+  //   _queuedSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
+  // }
 
   void _initScrollControllers() {
     _scrollControllers = List.generate(4, (i) => List.generate(4, (j) => ScrollController()));
@@ -89,11 +114,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   }
 
   void _resetGame() {
-    setState(() {
+    setState(() async {
       _coins = 500;
       _spinCount = 0;
       _winCount = 0;
-      _queuedSpins = SpinPreparer.prepareSpins(10, GameLogic.settings);
+      _queuedSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
       _rows = List.generate(4, (_) => List.filled(4, '🎰'));
       _initScrollControllers();
       _isSpinning = false;
@@ -119,7 +144,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _winLines = [];
     });
      if (_queuedSpins.isEmpty) {
-    _queuedSpins = SpinPreparer.prepareSpins(10, GameLogic.settings);
+    _queuedSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
   }
 
   final newSymbols = _queuedSpins.removeAt(0);
@@ -494,8 +519,8 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
             initialMinSpinToWin: GameLogic.settings.minSpinToWin,
             initialSymbolRates: GameLogic.settings.symbolRates,
             onSettingsUpdated: () {
-              setState(() {
-                _queuedSpins = SpinPreparer.prepareSpins(10, GameLogic.settings);
+              setState(() async {
+                _queuedSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
             });
             },
           ),
