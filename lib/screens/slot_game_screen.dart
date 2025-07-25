@@ -120,18 +120,20 @@ void _handleSettingsUpdated() async {
     GameLogic.updateSettings(settings);
   }
 
-  void _resetGame() {
-    setState(() async {
+  void _resetGame() async{
+    final newSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings); 
+    setState(()  {
       _coins = 500;
       _spinCount = 0;
       _winCount = 0;
-      _queuedSpins = await SpinPreparer.prepareSpins(10, GameLogic.settings);
+      _queuedSpins = newSpins;
       _rows = List.generate(4, (_) => List.filled(4, '🎰'));
       _initScrollControllers();
       _isSpinning = false;
       _winLines = [];
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => const ResetSuccessDialog(),
@@ -371,7 +373,7 @@ void _handleSettingsUpdated() async {
 
     return Column(
       children: [
-        // // Statistik win rate
+        // Statistik win rate
         // Padding(
         //   padding: const EdgeInsets.all(8.0),
         //   child: Column(
@@ -526,7 +528,12 @@ void _handleSettingsUpdated() async {
             initialMinSpinToWin: GameLogic.settings.minSpinToWin,
             initialSymbolRates: GameLogic.settings.symbolRates,
             onSettingsUpdated: _handleSettingsUpdated,
-
+            onSaveAndSwitchToSlot: () {
+    setState(() {
+      _currentNavIndex = 1; // index slot game
+    });
+    _pageController.jumpToPage(1);
+  },
           ),
           _buildSlotScreen(),
           const ProfilePage(),

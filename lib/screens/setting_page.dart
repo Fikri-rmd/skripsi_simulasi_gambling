@@ -8,6 +8,8 @@ class ProbabilitySettingsPage extends StatefulWidget {
   final int initialMinSpinToWin;
   final Map<String, double> initialSymbolRates;
   final VoidCallback? onSettingsUpdated;
+  final VoidCallback? onSaveAndSwitchToSlot;
+
 
   const ProbabilitySettingsPage({
     Key? key,
@@ -15,6 +17,7 @@ class ProbabilitySettingsPage extends StatefulWidget {
     required this.initialMinSpinToWin,
     required this.initialSymbolRates,
     this.onSettingsUpdated ,
+    this.onSaveAndSwitchToSlot,
   }) : super(key: key);
 
 
@@ -334,7 +337,8 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
           duration: Duration(seconds: 2),
         ),
       );
-    await Future.delayed(const Duration(milliseconds: 500));
+    // await Future.delayed(const Duration(milliseconds: 500));
+    widget.onSaveAndSwitchToSlot?.call();
 
     // Kembalikan ke halaman sebelumnya
     } catch (e) {
