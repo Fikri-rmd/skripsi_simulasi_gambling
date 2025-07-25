@@ -1,18 +1,20 @@
 import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:flutter/material.dart';
+import 'package:simulasi_slot/utils/spin_preparer.dart';
 
 
 class ProbabilitySettingsPage extends StatefulWidget {
   final double initialWinPercentage;
   final int initialMinSpinToWin;
   final Map<String, double> initialSymbolRates;
+  final VoidCallback? onSettingsUpdated;
 
   const ProbabilitySettingsPage({
     Key? key,
     required this.initialWinPercentage,
     required this.initialMinSpinToWin,
     required this.initialSymbolRates,
-
+    this.onSettingsUpdated,
   }) : super(key: key);
 
   @override
@@ -321,6 +323,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     // Simpan ke SharedPreferences
     await newSettings.saveToPrefs();
     GameLogic.updateSettings(newSettings);
+    widget.onSettingsUpdated?.call(); 
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Pengaturan berhasil disimpan!'),

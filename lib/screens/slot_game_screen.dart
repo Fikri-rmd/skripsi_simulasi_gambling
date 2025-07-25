@@ -12,6 +12,7 @@ import 'package:simulasi_slot/screens/profile_page.dart';
 import 'package:simulasi_slot/screens/setting_page.dart';
 import 'package:simulasi_slot/services/user_service.dart';
 import 'package:simulasi_slot/utils/game_logic.dart';
+import 'package:simulasi_slot/utils/spin_preparer.dart';
 import 'package:simulasi_slot/widgets/bottom_nav_bar.dart';
 import 'package:simulasi_slot/widgets/slot_machine.dart';
 
@@ -26,6 +27,7 @@ class SlotGameScreen extends StatefulWidget {
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
+  List<List<List<String>>> _queuedSpins = [];
   final Set<Point<int>> _winningPositions = {};
   bool _animateAll = false;
   List<WinLine> _winLines = [];
@@ -54,6 +56,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     }
     _initScrollControllers();
     _loadSettings();
+    _queuedSpins = SpinPreparer.prepareSpins(10, GameLogic.settings);
   }
 
   void _initScrollControllers() {
@@ -90,6 +93,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _coins = 500;
       _spinCount = 0;
       _winCount = 0;
+      _queuedSpins = SpinPreparer.prepareSpins(10, GameLogic.settings);
       _rows = List.generate(4, (_) => List.filled(4, '🎰'));
       _initScrollControllers();
       _isSpinning = false;
@@ -114,68 +118,98 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _isSpinning = true;
       _winLines = [];
     });
+     if (_queuedSpins.isEmpty) {
+    _queuedSpins = SpinPreparer.prepareSpins(10, GameLogic.settings);
+  }
 
-    // Generate new symbols
-    List<List<String>> newSymbols = GameLogic.generateSymbols();
+  final newSymbols = _queuedSpins.removeAt(0);
 
-    // Check if we need to force a win
-    bool shouldWinThisSpin = GameLogic.shouldWin(_spinCount);
-    String? forceWinSymbol;
-    String? forceWinType;
-    int? forceWinPosition;
+  List<Future> animations = [];
+  for (int row = 0; row < 4; row++) {
+    for (int col = 0; col < 4; col++) {
+      final delay = (row * 4 + col) * 100;
+      animations.add(
+        Future.delayed(
+          Duration(milliseconds: delay),
+          () => _startRollingAnimation(row, col, newSymbols[row][col]),
+        ),
+      );
+    }
+  }
 
-    if (shouldWinThisSpin) {
-      forceWinSymbol = GameLogic.getSymbolForWin();
-      final winTypes = ['horizontal', 'vertical', 'diagonal'];
-      forceWinType = winTypes[Random().nextInt(winTypes.length)];
+  await Future.wait(animations);
+
+  setState(() {
+    _rows = newSymbols;
+    _isSpinning = false;
+  });
+
+  await Future.delayed(const Duration(milliseconds: 1000));
+  if (mounted) {
+    _checkWin();
+  }
+
+    // // Generate new symbols
+    // List<List<String>> newSymbols = GameLogic.generateSymbols();
+
+    // // Check if we need to force a win
+    // bool shouldWinThisSpin = GameLogic.shouldWin(_spinCount);
+    // String? forceWinSymbol;
+    // String? forceWinType;
+    // int? forceWinPosition;
+
+    // if (shouldWinThisSpin) {
+    //   forceWinSymbol = GameLogic.getSymbolForWin();
+    //   final winTypes = ['horizontal', 'vertical', 'diagonal'];
+    //   forceWinType = winTypes[Random().nextInt(winTypes.length)];
       
-      switch (forceWinType) {
-        case 'horizontal':
-          forceWinPosition = Random().nextInt(4);
-          break;
-        case 'vertical':
-          forceWinPosition = Random().nextInt(4);
-          break;
-        case 'diagonal':
-          forceWinPosition = Random().nextInt(2); // 0 = down-right, 1 = down-left
-          break;
-      }
+    //   switch (forceWinType) {
+    //     case 'horizontal':
+    //       forceWinPosition = Random().nextInt(4);
+    //       break;
+    //     case 'vertical':
+    //       forceWinPosition = Random().nextInt(4);
+    //       break;
+    //     case 'diagonal':
+    //       forceWinPosition = Random().nextInt(2); // 0 = down-right, 1 = down-left
+    //       break;
+    //   }
 
-      // Apply forced win pattern
-      for (int r = 0; r < 4; r++) {
-        for (int c = 0; c < 4; c++) {
-          if (GameLogic.isInForceWinPattern(r, c, forceWinType, forceWinPosition)) {
-            newSymbols[r][c] = forceWinSymbol;
-          }
-        }
-      }
-    }
+    //   // Apply forced win pattern
+    //   for (int r = 0; r < 4; r++) {
+    //     for (int c = 0; c < 4; c++) {
+    //       if (GameLogic.isInForceWinPattern(r, c, forceWinType, forceWinPosition)) {
+    //         newSymbols[r][c] = forceWinSymbol;
+    //       }
+    //     }
+    //   }
+    // }
 
-    // Animasi berurutan per kolom
-    List<Future> animations = [];
-    for (int row = 0; row < 4; row++) {
-      for (int col = 0; col < 4; col++) {
-        final delay = (row * 4 + col) * 100;
-        animations.add(
-          Future.delayed(
-            Duration(milliseconds: delay),
-            () => _startRollingAnimation(row, col, newSymbols[row][col]),
-         ) );
-      }
-    }
+    // // Animasi berurutan per kolom
+    // List<Future> animations = [];
+    // for (int row = 0; row < 4; row++) {
+    //   for (int col = 0; col < 4; col++) {
+    //     final delay = (row * 4 + col) * 100;
+    //     animations.add(
+    //       Future.delayed(
+    //         Duration(milliseconds: delay),
+    //         () => _startRollingAnimation(row, col, newSymbols[row][col]),
+    //      ) );
+    //   }
+    // }
 
-    await Future.wait(animations);
+    // await Future.wait(animations);
 
-    setState(() {
-      _rows = newSymbols;
-      _isSpinning = false;
-    });
+    // setState(() {
+    //   _rows = newSymbols;
+    //   _isSpinning = false;
+    // });
 
-    // Cek kemenangan setelah animasi selesai
-    await Future.delayed(const Duration(milliseconds: 1000));
-    if (mounted) {
-      _checkWin();
-    }
+    // // Cek kemenangan setelah animasi selesai
+    // await Future.delayed(const Duration(milliseconds: 1000));
+    // if (mounted) {
+    //   _checkWin();
+    // }
   }
 
   Future<void> _startRollingAnimation(int row, int col, String finalSymbol) async {
@@ -459,6 +493,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
             initialWinPercentage: GameLogic.settings.winPercentage,
             initialMinSpinToWin: GameLogic.settings.minSpinToWin,
             initialSymbolRates: GameLogic.settings.symbolRates,
+            onSettingsUpdated: () {
+              setState(() {
+                _queuedSpins = SpinPreparer.prepareSpins(10, GameLogic.settings);
+            });
+            },
           ),
           _buildSlotScreen(),
           const ProfilePage(),
