@@ -41,13 +41,20 @@ class GameSettings {
 
   void validateSymbolRates() {
 
-    // Tetap validasi jika total > 0
-  final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
-
-  // Jika totalnya 0, itu error
-  if (total == 0.0) {
-    throw Exception("Symbol rates total must be > 0");
+    
+  if (symbolRates.values.every((r) => r == 0.0)) {
+    throw Exception("Total rate must be > 0");
   }
+  // Tidak perlu normalisasi
+
+
+  //   // Tetap validasi jika total > 0
+  // final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
+
+  // // Jika totalnya 0, itu error
+  // if (total == 0.0) {
+  //   throw Exception("Symbol rates total must be > 0");
+  // }
 
     // Jika ada simbol 100%, jangan normalisasi
   // final hasFullSymbol = symbolRates.values.any((rate) => rate == 1.0);
@@ -162,24 +169,36 @@ class GameLogic {
   // Generate simbol dengan mempertimbangkan probabilitas
   static String getRandomSymbol() {
     final fullSymbol = _getFullRateSymbol();
-    final filteredRates = (fullSymbol != null
-      ? (Map<String, double>.from(settings.symbolRates)
-          ..removeWhere((key, _) => key == fullSymbol))
-      : settings.symbolRates);
+    if (fullSymbol != null) return fullSymbol;
+
+    final pool = <String>[];
+
+    settings.symbolRates.forEach((symbol, rate) {
+      final count = (rate * 100).round(); // 0.25 → 25
+      pool.addAll(List.filled(count, symbol));
+  });
+
+    if (pool.isEmpty) return settings.symbolRates.keys.first;
+    return pool[_random.nextInt(pool.length)];
+    // final fullSymbol = _getFullRateSymbol();
+    // final filteredRates = (fullSymbol != null
+    //   ? (Map<String, double>.from(settings.symbolRates)
+    //       ..removeWhere((key, _) => key == fullSymbol))
+    //   : settings.symbolRates);
 
 
-    double totalWeight = filteredRates.values.fold(0.0, (sum, w) => sum + w);
-    double randomNumber = _random.nextDouble() * totalWeight;
-    double cumulative = 0.0;
+    // double totalWeight = filteredRates.values.fold(0.0, (sum, w) => sum + w);
+    // double randomNumber = _random.nextDouble() * totalWeight;
+    // double cumulative = 0.0;
     
-    for (var entry in filteredRates.entries) {
-      cumulative += entry.value;
-      if (randomNumber < cumulative) {
-        return entry.key;
-      }
-    }
+    // for (var entry in filteredRates.entries) {
+    //   cumulative += entry.value;
+    //   if (randomNumber < cumulative) {
+    //     return entry.key;
+    //   }
+    // }
     
-    return filteredRates.keys.first;
+    // return filteredRates.keys.first;
   }
 
   // Hitung probabilitas yang disesuaikan

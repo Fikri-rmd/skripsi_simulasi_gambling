@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:simulasi_slot/services/game_state.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -79,8 +80,9 @@ Future<void> _loadUserData() async {
         .limit(10)
         .snapshots();
   }
-
+  
   void _logout() async {
+    await resetAllGameData();
     try {
       await _auth.signOut();
       Navigator.pushAndRemoveUntil(

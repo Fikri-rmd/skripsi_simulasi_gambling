@@ -33,22 +33,35 @@ class SpinPreparer {
   }
 
   /// Ambil kombinasi spin berdasarkan winPercentage
-  static Future<List<List<List<String>>>> prepareSpins(
-  int totalSpins,
-  GameSettings settings,
-) async {
+  static Future<List<List<List<String>>>> prepareSpins({
+  required int totalSpins,
+  required currentSpinCount,
+  required GameSettings settings,
+}) async {
   await loadPatternsFromAssets();
 
   final minSpin = settings.minSpinToWin;
   final actualSpinsForWin = max(0, totalSpins - minSpin);
   final winCount = (settings.winPercentage * actualSpinsForWin).round();
   final loseCount = totalSpins - winCount;
+  
 
   final guaranteedLoses = List<List<List<String>>>.from(_losePatterns)..shuffle();
   final selectedWins = List<List<List<String>>>.from(_winPatterns)..shuffle();
 
   final List<List<List<String>>> result = [];
-
+  for (int i = currentSpinCount; i < currentSpinCount + totalSpins; i++) {
+    if (i < settings.minSpinToWin) {
+      result.add(_losePatterns[_random.nextInt(_losePatterns.length)]);
+    } else {
+      final chance = _random.nextDouble();
+      if (chance < settings.winPercentage) {
+        result.add(_winPatterns[_random.nextInt(_winPatterns.length)]);
+      } else {
+        result.add(_losePatterns[_random.nextInt(_losePatterns.length)]);
+      }
+    }
+  }
   // Spins sebelum mencapai minSpin → dijamin kalah
   result.addAll(guaranteedLoses.take(minSpin));
 
