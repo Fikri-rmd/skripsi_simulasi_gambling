@@ -70,7 +70,7 @@ void initState() {
   await _loadSpinCounter(); 
   await _loadStatistics();
  _queuedSpins = await SpinPreparer.prepareSpins(
-  totalSpins: 10,
+  totalSpins: 100,
   currentSpinCount: _totalSpinCounter,
   settings: GameLogic.settings,
 );
@@ -78,7 +78,7 @@ void initState() {
 }
 void _handleSettingsUpdated() async {
   final newSpins = await SpinPreparer.prepareSpins(
-  totalSpins: 10,
+  totalSpins: 100,
   currentSpinCount: _totalSpinCounter,
   settings: GameLogic.settings,
 );
@@ -140,7 +140,7 @@ Future<void> _loadSpinCounter() async {
 
   void _resetGame() async{
     final newSpins = await SpinPreparer.prepareSpins(
-      totalSpins: 10,
+      totalSpins: 100,
       currentSpinCount: _totalSpinCounter,
       settings: GameLogic.settings,
     );
@@ -155,6 +155,7 @@ Future<void> _loadSpinCounter() async {
       _initScrollControllers();
       _isSpinning = false;
       _winLines = [];
+      _loseCount = 0;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -180,7 +181,7 @@ Future<void> _loadSpinCounter() async {
     await _saveSpinCounter();
      if (_queuedSpins.isEmpty) {
     _queuedSpins = await SpinPreparer.prepareSpins(
-  totalSpins: 10,
+  totalSpins: 100,
   currentSpinCount: _totalSpinCounter,
   settings: GameLogic.settings,
 );
@@ -306,12 +307,12 @@ Future<void> _loadSpinCounter() async {
   await prefs.setInt('totalLoses', _loseCount);
   await prefs.setString('symbolFreq', jsonEncode(_symbolFrequency));
 }
-  String _getMostFrequentSymbol() {
-  if (_symbolFrequency.isEmpty) return '–';
-  return _symbolFrequency.entries
-      .reduce((a, b) => a.value > b.value ? a : b)
-      .key;
-}
+//   String _getMostFrequentSymbol() {
+//   if (_symbolFrequency.isEmpty) return '–';
+//   return _symbolFrequency.entries
+//       .reduce((a, b) => a.value > b.value ? a : b)
+//       .key;
+// }
   Future<void> _saveGameHistory(bool isWin, int amount, String details) async {
     if (widget.isGuest) return;
     final user = FirebaseAuth.instance.currentUser;
@@ -410,7 +411,7 @@ Future<void> _loadSpinCounter() async {
           ),
         ),
         Text('Menang: $_winCount | Kalah: $_loseCount'),
-        Text('Simbol populer: ${_getMostFrequentSymbol()}'),
+        // Text('Simbol populer: ${_getMostFrequentSymbol()}'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: ElevatedButton.icon(

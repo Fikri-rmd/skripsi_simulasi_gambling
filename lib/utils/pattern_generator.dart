@@ -5,7 +5,6 @@ import 'dart:io';
 class PatternGenerator {
   static final _random = Random();
 
-  // 5 simbol
   static const List<String> symbols = ['🍒', '🍋', '💎', '💰', '🍊'];
 
   static List<List<List<String>>> generateWinningPatterns() {
@@ -44,6 +43,55 @@ class PatternGenerator {
     return patterns;
   }
 
+  static List<List<List<String>>> generateCombinedWinningPatterns() {
+    List<List<List<String>>> patterns = [];
+
+    for (var symbol in symbols) {
+      // Row 0 & 3
+      final grid1 = _emptyGrid();
+      for (int col = 0; col < 4; col++) {
+        grid1[0][col] = symbol;
+        grid1[3][col] = symbol;
+      }
+      patterns.add(grid1);
+
+      // Column 0 & 2
+      final grid2 = _emptyGrid();
+      for (int row = 0; row < 4; row++) {
+        grid2[row][0] = symbol;
+        grid2[row][2] = symbol;
+      }
+      patterns.add(grid2);
+
+      // Diagonal + row 1
+      final grid3 = _emptyGrid();
+      for (int i = 0; i < 4; i++) {
+        grid3[i][i] = symbol;
+        grid3[1][i] = symbol;
+      }
+      patterns.add(grid3);
+
+      // Anti-diagonal + column 3
+      final grid4 = _emptyGrid();
+      for (int i = 0; i < 4; i++) {
+        grid4[i][3 - i] = symbol;
+        grid4[i][3] = symbol;
+      }
+      patterns.add(grid4);
+
+      // Row 1 + col 2 + diag
+      final grid5 = _emptyGrid();
+      for (int i = 0; i < 4; i++) {
+        grid5[1][i] = symbol;
+        grid5[i][2] = symbol;
+        grid5[i][i] = symbol;
+      }
+      patterns.add(grid5);
+    }
+
+    return patterns;
+  }
+
   static List<List<List<String>>> generateLosingPatterns(int count) {
     List<List<List<String>>> patterns = [];
 
@@ -63,16 +111,15 @@ class PatternGenerator {
   static String _randomSymbol() => symbols[_random.nextInt(symbols.length)];
 
   static bool _hasWin(List<List<String>> grid) {
-    // Horizontal
     for (int row = 0; row < 4; row++) {
       if (grid[row].toSet().length == 1) return true;
     }
-    // Vertical
+
     for (int col = 0; col < 4; col++) {
       final colSet = {for (int row = 0; row < 4; row++) grid[row][col]};
       if (colSet.length == 1) return true;
     }
-    // Diagonal
+
     final mainDiag = {for (int i = 0; i < 4; i++) grid[i][i]};
     final antiDiag = {for (int i = 0; i < 4; i++) grid[i][3 - i]};
     if (mainDiag.length == 1 || antiDiag.length == 1) return true;
@@ -87,4 +134,16 @@ class PatternGenerator {
     final jsonString = jsonEncode(patterns);
     File(filePath).writeAsStringSync(jsonString);
   }
+}
+
+void main() {
+  final basicWinning = PatternGenerator.generateWinningPatterns();
+  final combinedWinning = PatternGenerator.generateCombinedWinningPatterns();
+  final allWinning = [...basicWinning, ...combinedWinning];
+  final losingPatterns = PatternGenerator.generateLosingPatterns(2000);
+
+  final allPatterns = [...allWinning, ...losingPatterns];
+  PatternGenerator.savePatternsToJson(allPatterns, 'patterns.json');
+
+  print('Generated ${allWinning.length} winning and ${losingPatterns.length} losing patterns.');
 }
