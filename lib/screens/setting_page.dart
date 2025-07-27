@@ -85,14 +85,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               ),
             ),
             const SizedBox(height: 20),
-            // Tombol kembali di bagian atas
-            // Padding(
-            //   padding: const EdgeInsets.only(bottom: 20),
-            //   child: IconButton(
-            //     icon: const Icon(Icons.arrow_back, size: 30),
-            //     onPressed: () => Navigator.pop(context),
-            //   ),
-            // ),
+
             
             _buildSectionHeader('Persentase Kemenangan Umum'),
             _buildWinPercentageSetting(),
@@ -255,15 +248,11 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
                 min: 0.0,
                 max: 1.0,
                 divisions: 20,
-                label: '${(entry.value * 100).toStringAsFixed(1)}%',
+                label: '${(entry.value * 100).toStringAsFixed(1)}%', 
                 onChanged: (value) {
                   setState(() {
-                    if (value == 1.0) {
-        // Set simbol lain jadi 0.0
-        _symbolRates.updateAll((key, _) => key == entry.key ? 1.0 : 0.0);
-      } else {
                     _symbolRates[entry.key] = value;
-                  }});
+                  });
                 },
               ),
               Text(

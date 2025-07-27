@@ -39,36 +39,14 @@ class GameSettings {
     required this.symbolRates,
   });
 
-  void validateSymbolRates() {
+  List<String> get symbols => symbolRates.keys.toList();
 
-    
-  if (symbolRates.values.every((r) => r == 0.0)) {
+  void validateSymbolRates() {
+  final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
+  if (total <= 0.0) {
     throw Exception("Total rate must be > 0");
   }
-  // Tidak perlu normalisasi
-
-
-  //   // Tetap validasi jika total > 0
-  // final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
-
-  // // Jika totalnya 0, itu error
-  // if (total == 0.0) {
-  //   throw Exception("Symbol rates total must be > 0");
-  // }
-
-    // Jika ada simbol 100%, jangan normalisasi
-  // final hasFullSymbol = symbolRates.values.any((rate) => rate == 1.0);
-  // if (hasFullSymbol) return;
-
-  // final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
-  // if (total != 1.0 && total > 0.0) {
-  //   final newRates = <String, double>{};
-  //   symbolRates.forEach((symbol, rate) {
-  //     newRates[symbol] = rate / total;
-  //   });
-  //   symbolRates = newRates;
-  // }
-  }
+}
 
   Future<void> saveToPrefs() async {
     validateSymbolRates();
@@ -147,154 +125,65 @@ class GameLogic {
   }
 
   // Simbol dengan probabilitas 100%
-  static String? _getFullRateSymbol() {
-    for (var entry in settings.symbolRates.entries) {
-      if (entry.value == 1.0) return entry.key;
-    }
-    return null;
-  }
+  // static String? _getFullRateSymbol() {
+  //   for (var entry in settings.symbolRates.entries) {
+  //     if (entry.value == 1.0) return entry.key;
+  //   }
+  //   return null;
+  // }
 
-  // Simbol dengan probabilitas tertinggi
-  static String _getHighestProbabilitySymbol() {
-    return settings.symbolRates.entries.reduce((a, b) => 
-        a.value > b.value ? a : b).key;
-  }
+  // // Simbol dengan probabilitas tertinggi
+  // static String _getHighestProbabilitySymbol() {
+  //   return settings.symbolRates.entries.reduce((a, b) => 
+  //       a.value > b.value ? a : b).key;
+  // }
 
   // Untuk kemenangan, gunakan simbol khusus
-  static String getSymbolForWin() {
-    final fullSymbol = _getFullRateSymbol();
-    return fullSymbol ?? _getHighestProbabilitySymbol();
-  }
+  // static String getSymbolForWin() {
+  //   final fullSymbol = _getFullRateSymbol();
+  //   return fullSymbol ?? _getHighestProbabilitySymbol();
+  // }
 
-  // Generate simbol dengan mempertimbangkan probabilitas
   static String getRandomSymbol() {
-    final fullSymbol = _getFullRateSymbol();
-    if (fullSymbol != null) return fullSymbol;
-
-    final pool = <String>[];
-
-    settings.symbolRates.forEach((symbol, rate) {
-      final count = (rate * 100).round(); // 0.25 → 25
-      pool.addAll(List.filled(count, symbol));
-  });
-
-    if (pool.isEmpty) return settings.symbolRates.keys.first;
-    return pool[_random.nextInt(pool.length)];
-    // final fullSymbol = _getFullRateSymbol();
-    // final filteredRates = (fullSymbol != null
-    //   ? (Map<String, double>.from(settings.symbolRates)
-    //       ..removeWhere((key, _) => key == fullSymbol))
-    //   : settings.symbolRates);
-
-
-    // double totalWeight = filteredRates.values.fold(0.0, (sum, w) => sum + w);
-    // double randomNumber = _random.nextDouble() * totalWeight;
-    // double cumulative = 0.0;
+    final totalWeight = settings.symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
+    double randomValue = _random.nextDouble() * totalWeight;
+    double cumulative = 0.0;
     
-    // for (var entry in filteredRates.entries) {
-    //   cumulative += entry.value;
-    //   if (randomNumber < cumulative) {
-    //     return entry.key;
-    //   }
-    // }
+    for (var entry in settings.symbolRates.entries) {
+      cumulative += entry.value;
+      if (randomValue < cumulative) {
+        return entry.key;
+      }
+    }
     
-    // return filteredRates.keys.first;
+    return settings.symbolRates.keys.first;
   }
+
 
   // Hitung probabilitas yang disesuaikan
-  static bool shouldWin(int spinCount) {
-    if (settings.winPercentage == 0.0) return false;
-    if (spinCount < settings.minSpinToWin) return false;
+  // static bool shouldWin(int spinCount) {
+  //   if (settings.winPercentage == 0.0) return false;
+  //   if (spinCount < settings.minSpinToWin) return false;
     
-    final adjustedProbability = _calculateAdjustedProbability();
-    return _random.nextDouble() < adjustedProbability;
-  }
+  //   // final adjustedProbability = _calculateAdjustedProbability();
+  //   // return _random.nextDouble() < adjustedProbability;
+  // }
 
-  static double _calculateAdjustedProbability() {
-    final highProbSymbol = _getHighestProbabilitySymbol();
-    final highProbRate = settings.symbolRates[highProbSymbol]!;
-    final boostFactor = pow(highProbRate, 2).clamp(1.0, 1.5);
+  // static double _calculateAdjustedProbability() {
+  //   // final highProbSymbol = _getHighestProbabilitySymbol();
+  //   // final highProbRate = settings.symbolRates[highProbSymbol]!;
+  //   // final boostFactor = pow(highProbRate, 2).clamp(1.0, 1.5);
     
-    return settings.winPercentage * boostFactor;
-  }
+  //   return settings.winPercentage * boostFactor;
+  // }
 
   // Generate grid simbol
-  static List<List<String>> generateSymbols({int spinCount = 0}) {
-  bool isWin = shouldWin(spinCount);
-  final fullSymbol = _getFullRateSymbol();
-
-  if (isWin && fullSymbol != null) {
-    return generateForcedWinGridWithSymbol(fullSymbol);
-  }
-
+ static List<List<String>> generateSymbols({int spinCount = 0}) {
+  // Generate grid normal tanpa paksa kemenangan
   return List.generate(4, (row) {
     return List.generate(4, (col) => getRandomSymbol());
   });
 }
-  static List<List<String>> generateForcedWinGridWithSymbol(String symbol) {
-  List<List<String>> grid = List.generate(4, (row) {
-    return List.generate(4, (col) => getRandomSymbol());
-  });
-
-  final rand = _random.nextInt(10);
-  String type;
-  int pos;
-
-  if (rand < 4) {
-    type = 'horizontal';
-    pos = _random.nextInt(4);
-  } else if (rand < 8) {
-    type = 'vertical';
-    pos = _random.nextInt(4);
-  } else {
-    type = 'diagonal';
-    pos = _random.nextInt(2); // 0: main, 1: anti
-  }
-
-  final pattern = generateForcedWinPattern(symbol, type, pos);
-
-  // Replace winning line only
-  switch (type) {
-    case 'horizontal':
-      grid[pos] = List.filled(4, symbol);
-      break;
-    case 'vertical':
-      for (int r = 0; r < 4; r++) {
-        grid[r][pos] = symbol;
-      }
-      break;
-    case 'diagonal':
-      if (pos == 0) {
-        for (int i = 0; i < 4; i++) grid[i][i] = symbol;
-      } else {
-        for (int i = 0; i < 4; i++) grid[i][3 - i] = symbol;
-      }
-      break;
-  }
-
-  return grid;
-}
-
-
-  static List<List<String>> generateGuaranteedWinGridForFullRateSymbol(String symbol) {
-  final rand = _random.nextInt(10);
-  late String type;
-  int pos;
-
-  if (rand < 4) {
-    type = 'horizontal';
-    pos = _random.nextInt(4);
-  } else if (rand < 8) {
-    type = 'vertical';
-    pos = _random.nextInt(4);
-  } else {
-    type = 'diagonal';
-    pos = _random.nextInt(2); // 0=main, 1=anti
-  }
-
-  return generateForcedWinPattern(symbol, type, pos);
-}
-
   // Cek pola kemenangan
   static List<WinLine> checkWinLines(List<List<String>> grid) {
     List<WinLine> winLines = [];
@@ -384,40 +273,6 @@ class GameLogic {
     return winLines;
   }
 
-  // Untuk memaksa kemenangan dengan pola tertentu
-  static List<List<String>> generateForcedWinPattern(
-    String winSymbol,
-    String winType,
-    int position,
-  ) {
-    final newGrid = List.generate(4, (row) => List.generate(4, (col) => getRandomSymbol()));
-
-    switch (winType) {
-      case 'horizontal':
-        for (int col = 0; col < 4; col++) {
-          newGrid[position][col] = winSymbol;
-        }
-        break;
-      case 'vertical':
-        for (int row = 0; row < 4; row++) {
-          newGrid[row][position] = winSymbol;
-        }
-        break;
-      case 'diagonal':
-        if (position == 0) {
-          for (int i = 0; i < 4; i++) {
-            newGrid[i][i] = winSymbol;
-          }
-        } else {
-          for (int i = 0; i < 4; i++) {
-            newGrid[i][3 - i] = winSymbol;
-          }
-        }
-        break;
-    }
-    
-    return newGrid;
-  }
 
   // Warna latar untuk simbol
   static Color getSymbolColor(String symbol) {
@@ -427,10 +282,6 @@ class GameLogic {
       case '💎': return Colors.blue.shade100;
       case '💰': return Colors.green.shade100;
       case '🍊': return Colors.orange.shade100;
-      // case '🔔': return Colors.amber.shade100;
-      // case '🎲': return Colors.deepPurple.shade100;
-      // case '🥇': return Colors.amber.shade300;
-      // case '🍇': return Colors.purple.shade100;
       default: return Colors.grey.shade200;
     }
   }

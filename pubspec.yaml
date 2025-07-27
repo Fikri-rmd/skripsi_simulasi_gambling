@@ -58,7 +58,12 @@ flutter:
 
   assets:
     - assets/
-    - assets/win_patterns.json
-    - assets/lose_patterns.json
+    - assets/patterns/cherry_win_patterns.json
+    - assets/patterns/lemon_win_patterns.json
+    - assets/patterns/diamond_win_patterns.json
+    - assets/patterns/money_win_patterns.json
+    - assets/patterns/orange_win_patterns.json
+    - assets/patterns/symbol_map.json
+    - assets/patterns/lose_patterns.json
 
  

@@ -65,7 +65,7 @@ class ProbabilityCalibrator {
       }
     });
     
-    return bestSymbol ?? '💎'; // Fallback symbol
+    return bestSymbol ?? GameLogic.settings.symbols.first;
   }
 
   // Update settings dari GameLogic
