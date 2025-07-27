@@ -1,8 +1,7 @@
-// ignore_for_file: unused_field
+
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -31,8 +30,6 @@ class SlotGameScreen extends StatefulWidget {
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
   List<List<List<String>>> _queuedSpins = [];
-  final Set<Point<int>> _winningPositions = {};
-  bool _animateAll = false;
   List<WinLine> _winLines = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   int _totalSpinCounter = 0;
