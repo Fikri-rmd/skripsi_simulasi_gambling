@@ -49,6 +49,15 @@ void initState() {
   super.initState();
   _initAll(); // <- async function non-await
   _initUserData();
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final prefs = await SharedPreferences.getInstance();
+    final isFirstRun = prefs.getBool('first_run') ?? true;
+    
+    if (isFirstRun) {
+      await _resetGameStatistics();
+      await prefs.setBool('first_run', false);
+    }
+  });
   _pageController = PageController(initialPage: _currentNavIndex);
   if (widget.isGuest) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -84,6 +93,30 @@ void _handleSettingsUpdated() async {
     _queuedSpins = newSpins;
   });
 }
+
+Future<void> _resetGameStatistics() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt('totalSpinCounter', 0);
+  await prefs.setInt('totalWins', 0);
+  await prefs.setInt('totalLoses', 0);
+  await prefs.remove('symbolFreq');
+  await prefs.remove('winPercentage');
+  await prefs.remove('minSpinToWin');
+  final keys = prefs.getKeys();
+  for (String key in keys) {
+    if (key.startsWith('symbol_')) {
+      await prefs.remove(key);
+    }
+  }
+  
+  setState(() {
+    _totalSpinCounter = 0;
+    _winCount = 0;
+    _loseCount = 0;
+    _symbolFrequency = {};
+  });
+}
+
 Future<void> _loadStatistics() async {
   final prefs = await SharedPreferences.getInstance();
   _winCount = prefs.getInt('totalWins') ?? 0;
@@ -293,9 +326,6 @@ Future<void> _loadSpinCounter() async {
         isWin: false,
       );
     }
-
-    // Update kalibrasi AI
-    GameLogic.updateStats(won);
     _saveStatistics();
   }
   Future<void> _saveStatistics() async {
@@ -304,12 +334,7 @@ Future<void> _loadSpinCounter() async {
   await prefs.setInt('totalLoses', _loseCount);
   await prefs.setString('symbolFreq', jsonEncode(_symbolFrequency));
 }
-//   String _getMostFrequentSymbol() {
-//   if (_symbolFrequency.isEmpty) return '–';
-//   return _symbolFrequency.entries
-//       .reduce((a, b) => a.value > b.value ? a : b)
-//       .key;
-// }
+
   Future<void> _saveGameHistory(bool isWin, int amount, String details) async {
     if (widget.isGuest) return;
     final user = FirebaseAuth.instance.currentUser;
@@ -352,49 +377,11 @@ Future<void> _loadSpinCounter() async {
       _pageController.jumpToPage(index);
     });
   }
-//   Future<void> resetAllGameData() async {
-//   final prefs = await SharedPreferences.getInstance();
-//   await prefs.remove('totalSpinCounter');
-
-//   setState(() {
-//     _coins = 500;
-//     _spinCount = 0;
-//     _totalSpinCounter = 0;
-//     _winCount = 0;
-//     _rows = List.generate(4, (_) => List.filled(4, '🎰'));
-//     _queuedSpins.clear();
-//   });
-// }
 
 
   Widget _buildSlotScreen() {
-    // double targetWinRate = GameLogic.settings.winPercentage;
-    // double actualWinRate = _spinCount > 0 ? _winCount / _spinCount : 0.0;
-
     return Column(
       children: [
-        // Statistik win rate
-        // Padding(
-        //   padding: const EdgeInsets.all(8.0),
-        //   child: Column(
-        //     children: [
-        //       Row(
-        //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        //         children: [
-        //           Text('Target: ${(targetWinRate * 100).toStringAsFixed(1)}%'),
-        //           Text('Aktual: ${(actualWinRate * 100).toStringAsFixed(1)}%'),
-        //         ],
-        //       ),
-        //       LinearProgressIndicator(
-        //         value: actualWinRate,
-        //         minHeight: 6,
-        //         backgroundColor: Colors.grey[300],
-        //         valueColor: AlwaysStoppedAnimation<Color>(
-        //           _getWinRateColor(actualWinRate, targetWinRate),
-        //         ),
-        //    ) ],
-        //   ),
-        // ),
         Expanded(
           child: SingleChildScrollView(
             child: Center(
@@ -455,13 +442,6 @@ Future<void> _loadSpinCounter() async {
       ],
     );
   }
-
-  // Color _getWinRateColor(double actual, double target) {
-  //   double diff = (actual - target).abs();
-  //   if (diff <= 0.05) return Colors.green;
-  //   if (diff <= 0.1) return Colors.orange;
-  //   return Colors.red;
-  // }
 
   void _showEducationalDialog() {
     showDialog(
@@ -555,6 +535,7 @@ Future<void> _loadSpinCounter() async {
 
   @override
   void dispose() {
+    GameLogic.resetStatistics();
     for (var row in _scrollControllers) {
       for (var controller in row) {
         controller.dispose();

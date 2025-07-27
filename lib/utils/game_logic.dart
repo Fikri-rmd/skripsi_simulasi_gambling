@@ -105,44 +105,11 @@ class GameLogic {
     },
   )..validateSymbolRates();
 
-  // Statistik win rate
-  static int _totalSpins = 0;
-  static int _totalWins = 0;
-
-  static double get actualWinRate {
-    if (_totalSpins == 0) return 0.0;
-    return _totalWins / _totalSpins;
-  }
-
-  static void resetStats() {
-    _totalSpins = 0;
-    _totalWins = 0;
-  }
 
   static void updateSettings(GameSettings newSettings) {
     settings = newSettings;
     settings.validateSymbolRates();
   }
-
-  // Simbol dengan probabilitas 100%
-  // static String? _getFullRateSymbol() {
-  //   for (var entry in settings.symbolRates.entries) {
-  //     if (entry.value == 1.0) return entry.key;
-  //   }
-  //   return null;
-  // }
-
-  // // Simbol dengan probabilitas tertinggi
-  // static String _getHighestProbabilitySymbol() {
-  //   return settings.symbolRates.entries.reduce((a, b) => 
-  //       a.value > b.value ? a : b).key;
-  // }
-
-  // Untuk kemenangan, gunakan simbol khusus
-  // static String getSymbolForWin() {
-  //   final fullSymbol = _getFullRateSymbol();
-  //   return fullSymbol ?? _getHighestProbabilitySymbol();
-  // }
 
   static String getRandomSymbol() {
     final totalWeight = settings.symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
@@ -159,23 +126,21 @@ class GameLogic {
     return settings.symbolRates.keys.first;
   }
 
-
-  // Hitung probabilitas yang disesuaikan
-  // static bool shouldWin(int spinCount) {
-  //   if (settings.winPercentage == 0.0) return false;
-  //   if (spinCount < settings.minSpinToWin) return false;
-    
-  //   // final adjustedProbability = _calculateAdjustedProbability();
-  //   // return _random.nextDouble() < adjustedProbability;
-  // }
-
-  // static double _calculateAdjustedProbability() {
-  //   // final highProbSymbol = _getHighestProbabilitySymbol();
-  //   // final highProbRate = settings.symbolRates[highProbSymbol]!;
-  //   // final boostFactor = pow(highProbRate, 2).clamp(1.0, 1.5);
-    
-  //   return settings.winPercentage * boostFactor;
-  // }
+  static Future<void> resetStatistics() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('totalSpinCounter', 0);
+    await prefs.setInt('totalWins', 0);
+    await prefs.setInt('totalLoses', 0);
+    await prefs.remove('symbolFreq');
+    await prefs.remove('winPercentage');
+    await prefs.remove('minSpinToWin');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      if (key.startsWith('symbol_')) {
+        await prefs.remove(key);
+      }
+    }
+  }
 
   // Generate grid simbol
  static List<List<String>> generateSymbols({int spinCount = 0}) {
@@ -284,12 +249,6 @@ class GameLogic {
       case '🍊': return Colors.orange.shade100;
       default: return Colors.grey.shade200;
     }
-  }
-
-  // Update statistik setelah spin
-  static void updateStats(bool won) {
-    _totalSpins++;
-    if (won) _totalWins++;
   }
 
   static void resetSettings() {

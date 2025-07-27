@@ -1,9 +1,9 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:simulasi_slot/screens/login_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:simulasi_slot/services/game_state.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -65,6 +65,22 @@ Future<void> _loadUserData() async {
     }
   }
 }
+Future<void> _resetGameStatistics() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt('totalSpinCounter', 0);
+  await prefs.setInt('totalWins', 0);
+  await prefs.setInt('totalLoses', 0);
+  await prefs.remove('symbolFreq');
+  
+  await prefs.remove('winPercentage');
+  await prefs.remove('minSpinToWin');
+   final keys = prefs.getKeys();
+  for (String key in keys) {
+    if (key.startsWith('symbol_')) {
+      await prefs.remove(key);
+    }
+  }
+}
 
   Stream<QuerySnapshot> _getGameHistoryStream() {
     User? user = _auth.currentUser;
@@ -82,8 +98,8 @@ Future<void> _loadUserData() async {
   }
   
   void _logout() async {
-    await resetAllGameData();
     try {
+      await _resetGameStatistics();
       await _auth.signOut();
       Navigator.pushAndRemoveUntil(
         context,
