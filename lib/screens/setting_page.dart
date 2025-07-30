@@ -199,9 +199,9 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
           children: [
             Slider(
               value: _minSpinToWin.toDouble(),
-              min: 1,
-              max: 50,
-              divisions: 49,
+              min: 0,
+              max: 25,
+              divisions: 25,
               label: '$_minSpinToWin',
               onChanged: (value) {
                 setState(() {

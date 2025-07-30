@@ -175,6 +175,7 @@ Future<void> _loadSpinCounter() async {
       settings: GameLogic.settings,
     );
     await _saveSpinCounter();
+    await GameLogic.resetStatistics();
     setState(()  {
       _coins = 500;
       _spinCount = 0;
@@ -269,13 +270,13 @@ Future<void> _loadSpinCounter() async {
 
   await _scrollControllers[row][col].animateTo(
     targetOffset * 0.7,
-    duration: const Duration(milliseconds: 3500),
+    duration: const Duration(milliseconds: 3000),
     curve: Curves.easeIn,
   );
 
   await _scrollControllers[row][col].animateTo(
     targetOffset,
-    duration: const Duration(milliseconds: 1200),
+    duration: const Duration(milliseconds: 1100),
     curve: Curves.easeInOut,
   );
 

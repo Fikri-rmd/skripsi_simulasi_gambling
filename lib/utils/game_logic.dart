@@ -132,15 +132,11 @@ class GameLogic {
     await prefs.setInt('totalWins', 0);
     await prefs.setInt('totalLoses', 0);
     await prefs.remove('symbolFreq');
-    await prefs.remove('winPercentage');
-    await prefs.remove('minSpinToWin');
-    final keys = prefs.getKeys();
-    for (String key in keys) {
-      if (key.startsWith('symbol_')) {
-        await prefs.remove(key);
-      }
-    }
   }
+
+
+
+  
 
   // Generate grid simbol
  static List<List<String>> generateSymbols({int spinCount = 0}) {
