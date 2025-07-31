@@ -55,6 +55,7 @@ void initState() {
     
     if (isFirstRun) {
       await _resetGameStatistics();
+      GameLogic.generateSymbols(spinCount: _spinCount);
       await prefs.setBool('first_run', false);
     }
   });
@@ -75,6 +76,7 @@ void initState() {
   await _loadSettings();
   await _loadSpinCounter(); 
   await _loadStatistics();
+  GameLogic.generateSymbols(spinCount: _spinCount);
  _queuedSpins = await SpinPreparer.prepareSpins(
   totalSpins: 100,
   currentSpinCount: _totalSpinCounter,
@@ -176,6 +178,7 @@ Future<void> _loadSpinCounter() async {
     );
     await _saveSpinCounter();
     await GameLogic.resetStatistics();
+    await GameLogic.generateSymbols(spinCount: _spinCount);
     setState(()  {
       _coins = 500;
       _spinCount = 0;
@@ -201,24 +204,26 @@ Future<void> _loadSpinCounter() async {
 
   Future<void> _spin() async {
     if (_coins < 10 || _isSpinning) return;
-
+    setState(() {
+      _spinCount++;
+    });
+    await GameLogic.generateSymbols(spinCount: _spinCount);
     setState(() {
       _coins -= 10;
-      _spinCount++;
       _isSpinning = true;
       _winLines = [];
       _totalSpinCounter++;
     });
     await _saveSpinCounter();
-     if (_queuedSpins.isEmpty) {
-    _queuedSpins = await SpinPreparer.prepareSpins(
-  totalSpins: 100,
-  currentSpinCount: _totalSpinCounter,
-  settings: GameLogic.settings,
-);
-  }
+//      if (_queuedSpins.isEmpty) {
+//     _queuedSpins = await SpinPreparer.prepareSpins(
+//   totalSpins: 100,
+//   currentSpinCount: _totalSpinCounter,
+//   settings: GameLogic.settings,
+// );
+//   }
 
-  final newSymbols = _queuedSpins.removeAt(0);
+  final newSymbols = GameLogic.generateSymbols(spinCount: _spinCount);
 
   List<Future> animations = [];
   for (int row = 0; row < 4; row++) {
@@ -242,8 +247,6 @@ Future<void> _loadSpinCounter() async {
     _symbolFrequency[symbol] = (_symbolFrequency[symbol] ?? 0) + 1;
   }
 }
-
-    _isSpinning = false;
   });
 
   await Future.delayed(const Duration(milliseconds: 1000));
@@ -295,7 +298,6 @@ Future<void> _loadSpinCounter() async {
       _winCount++;
       int totalReward = _winLines.fold(0, (sum, line) => sum + line.reward);
       setState(() {
-        _isSpinning = false;
         _coins += totalReward;
       });
 
@@ -359,8 +361,14 @@ Future<void> _loadSpinCounter() async {
     showDialog(
       context: context,
       builder: (context) => WinLossDialog(
+        isSpinning: _isSpinning,
         message: message,
         isWin: isWin,
+        onDialogClosed: () => {
+          setState(() {
+            _isSpinning = false;
+          })
+        }
       ),
     );
   }

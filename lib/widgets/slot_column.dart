@@ -34,7 +34,7 @@ class _SlotColumnState extends State<SlotColumn> with SingleTickerProviderStateM
     
     _highlightController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 300),
     );
     
     _highlightAnimation = CurvedAnimation(
@@ -50,7 +50,7 @@ class _SlotColumnState extends State<SlotColumn> with SingleTickerProviderStateM
     // Trigger highlight animation when winning symbol is detected and rolling stops
     if (!widget.isRolling && widget.isWinningSymbol && !_showHighlight) {
       _showHighlight = true;
-      Future.delayed(const Duration(milliseconds: 300), () {
+      Future.delayed(const Duration(milliseconds: 300 ), () {
         if (mounted) {
           _highlightController.forward();
         }

@@ -42,11 +42,11 @@ class GameSettings {
   List<String> get symbols => symbolRates.keys.toList();
 
   void validateSymbolRates() {
-  final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
-  if (total <= 0.0) {
-    throw Exception("Total rate must be > 0");
+    final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
+    if (total <= 0.0) {
+      throw Exception("Total rate must be > 0");
+    }
   }
-}
 
   Future<void> saveToPrefs() async {
     validateSymbolRates();
@@ -105,6 +105,46 @@ class GameLogic {
     },
   )..validateSymbolRates();
 
+  static int _winAvailable = 0;
+  static double _currentWinPercentage = 0.0;
+
+  static void _manageSpinCycle(int spinCount) {
+    if (spinCount % 10 == 1) {
+      double baseWinPercentage = settings.winPercentage;
+      _winAvailable = (baseWinPercentage * 10).round();
+      _currentWinPercentage = baseWinPercentage;
+    }
+  }
+
+  static List<List<String>> _generateWinningGrid() {
+    var grid = List.generate(4, (_) => List.generate(4, (_) => getRandomSymbol()));
+    final winTypes = ['horizontal', 'vertical', 'diagonal'];
+    final selectedType = winTypes[_random.nextInt(winTypes.length)];
+    final winningSymbol = getRandomSymbol();
+
+    if (selectedType == 'horizontal') {
+      final row = _random.nextInt(4);
+      for (int col = 0; col < 4; col++) {
+        grid[row][col] = winningSymbol;
+      }
+    } else if (selectedType == 'vertical') {
+      final col = _random.nextInt(4);
+      for (int row = 0; row < 4; row++) {
+        grid[row][col] = winningSymbol;
+      }
+    } else {
+      if (_random.nextBool()) {
+        for (int i = 0; i < 4; i++) {
+          grid[i][i] = winningSymbol;
+        }
+      } else {
+        for (int i = 0; i < 4; i++) {
+          grid[i][3 - i] = winningSymbol;
+        }
+      }
+    }
+    return grid;
+  }
 
   static void updateSettings(GameSettings newSettings) {
     settings = newSettings;
@@ -134,26 +174,46 @@ class GameLogic {
     await prefs.remove('symbolFreq');
   }
 
+  static List<List<String>> generateSymbols({int spinCount = 0}) {
+    _manageSpinCycle(spinCount);
 
+    final bool shouldWin = _random.nextDouble() < _currentWinPercentage;
 
-  
+    debugPrint("_______________________________________");
+    debugPrint("Win Percentage: $_currentWinPercentage");
+    debugPrint("Win Available: $_winAvailable");
+    debugPrint("_______________________________________");
+    // return _generateWinningGrid();
 
-  // Generate grid simbol
- static List<List<String>> generateSymbols({int spinCount = 0}) {
-  // Generate grid normal tanpa paksa kemenangan
-  return List.generate(4, (row) {
-    return List.generate(4, (col) => getRandomSymbol());
-  });
-}
-  // Cek pola kemenangan
+    if (_winAvailable.round() == 0) {
+      _currentWinPercentage = 0.0;
+    }
+
+    if (_winAvailable > 0 && shouldWin) {
+      _winAvailable--;
+      return _generateWinningGrid();
+    } else {
+      if (_winAvailable > 0){
+        _currentWinPercentage += 0.1;
+      }
+
+      return List.generate(4, (row) {
+        return List.generate(4, (col) => getRandomSymbol());
+      });
+    }
+  }
+
   static List<WinLine> checkWinLines(List<List<String>> grid) {
+
+  debugPrint("--- [LOGIC] Grid yang DITERIMA oleh checkWinLines: ---");
+  grid.forEach((row) => debugPrint(row.toString()));
+  debugPrint("-------------------------------------------------------");
     List<WinLine> winLines = [];
     final baseRewards = {
       '🍒': 3, '🍋': 4, '💎': 10, '💰': 15,
       '🍊': 5,
     };
     
-    // Horizontal
     for (int row = 0; row < 4; row++) {
       String symbol = grid[row][0];
       if (symbol == '🎰') continue;
@@ -174,7 +234,6 @@ class GameLogic {
       }
     }
    
-    // Vertical
     for (int col = 0; col < 4; col++) {
       String symbol = grid[0][col];
       if (symbol == '🎰') continue;
@@ -195,7 +254,6 @@ class GameLogic {
       }
     }
     
-    // Diagonal (top-left to bottom-right)
     String mainDiagSymbol = grid[0][0];
     bool mainDiagWin = mainDiagSymbol != '🎰';
     for (int i = 1; i < 4; i++) {
@@ -213,7 +271,6 @@ class GameLogic {
       ));
     }
     
-    // Diagonal (top-right to bottom-left)
     String antiDiagSymbol = grid[0][3];
     bool antiDiagWin = antiDiagSymbol != '🎰';
     for (int i = 1; i < 4; i++) {
@@ -234,8 +291,6 @@ class GameLogic {
     return winLines;
   }
 
-
-  // Warna latar untuk simbol
   static Color getSymbolColor(String symbol) {
     switch (symbol) {
       case '🍒': return Colors.pink.shade100;
@@ -253,12 +308,11 @@ class GameLogic {
       minSpinToWin: 5,
       symbolRates: {
         '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
-      '🍊': 0.20,
+        '🍊': 0.20,
       },
     )..validateSymbolRates();
   }
 
-  // Helper untuk UI
   static bool isInForceWinPattern(int row, int col, String? winType, int? position) {
     if (winType == null || position == null) return false;
 
@@ -274,4 +328,4 @@ class GameLogic {
         return false;
     }
   }
-}                     
+}
