@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,8 +44,8 @@ class GameSettings {
 
   void validateSymbolRates() {
     final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
-    if (total <= 0.0) {
-      throw Exception("Total rate must be > 0");
+    if ((total - 1.0).abs() > 0.001) {
+      throw Exception("Total symbol rates must be 100%");
     }
   }
 
@@ -61,17 +62,26 @@ class GameSettings {
 
   static Future<GameSettings> loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    double winPercentage = prefs.getDouble('winPercentage') ?? 0.5;
+    double winPercentage = prefs.getDouble('winPercentage') ?? 0.2;
     int minSpinToWin = prefs.getInt('minSpinToWin') ?? 5;
     
     Map<String, double> defaultRates = {
-      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
-      '🍊': 0.20,
+      '🍒': 0.25, '🍋': 0.25, '💎': 0.20, '💰': 0.15,
+      '🍊': 0.15,
     };
     
     Map<String, double> symbolRates = {};
     for (String symbol in defaultRates.keys) {
       symbolRates[symbol] = prefs.getDouble('symbol_$symbol') ?? defaultRates[symbol]!;
+    }
+
+    final total = symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
+    if ((total - 1.0).abs() > 0.001) {
+      return GameSettings(
+        winPercentage: winPercentage,
+        minSpinToWin: minSpinToWin,
+        symbolRates: defaultRates,
+      );
     }
     
     return GameSettings(
@@ -97,30 +107,114 @@ class GameSettings {
 class GameLogic {
   static final Random _random = Random();
   static GameSettings settings = GameSettings(
-    winPercentage: 0.5,
+    winPercentage: 0.2,
     minSpinToWin: 5,
     symbolRates: {
-      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
-      '🍊': 0.20,
+      '🍒': 0.25, '🍋': 0.25, '💎': 0.20, '💰': 0.15,
+      '🍊': 0.15,
     },
   )..validateSymbolRates();
 
-  static int _winAvailable = 0;
-  static double _currentWinPercentage = 0.0;
+  static Queue<bool> patternPool = Queue<bool>();
+  static const String _patternPoolKey = 'patternPool';
 
-  static void _manageSpinCycle(int spinCount) {
-    if (spinCount % 10 == 1) {
-      double baseWinPercentage = settings.winPercentage;
-      _winAvailable = (baseWinPercentage * 10).round();
-      _currentWinPercentage = baseWinPercentage;
+  static Future<void> _savePatternPool() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<String> stringList = patternPool.map((b) => b.toString()).toList();
+    await prefs.setStringList(_patternPoolKey, stringList);
+  }
+  
+  static List<bool> _generateInjectedPatternList(int totalPatterns) {
+    final int winCount = (settings.winPercentage * totalPatterns).round();
+    final int loseCount = totalPatterns - winCount;
+    final int minSpinGap = settings.minSpinToWin;
+
+    if (winCount == 0) {
+      return List.generate(totalPatterns, (_) => false);
     }
+    
+    final sourcePatterns = List.generate(winCount, (_) => true)
+      ..addAll(List.generate(loseCount, (_) => false));
+    sourcePatterns.shuffle(_random);
+
+    final List<bool> finalPool = [];
+    int lossesSinceWin = minSpinGap;
+
+    for (final pattern in sourcePatterns) {
+      if (finalPool.length >= totalPatterns) break;
+
+      if (pattern == true) {
+        final int lossesToInject = minSpinGap - lossesSinceWin;
+        if (lossesToInject > 0) {
+          for (int i = 0; i < lossesToInject; i++) {
+            if (finalPool.length >= totalPatterns) break;
+            finalPool.add(false);
+          }
+        }
+        if (finalPool.length < totalPatterns) {
+          finalPool.add(true);
+        }
+        lossesSinceWin = 0;
+      } else {
+        if (finalPool.length < totalPatterns) {
+          finalPool.add(false);
+          lossesSinceWin++;
+        }
+      }
+    }
+
+    while (finalPool.length < totalPatterns) {
+      finalPool.add(false);
+    }
+
+    return finalPool;
   }
 
-  static List<List<String>> _generateWinningGrid() {
-    var grid = List.generate(4, (_) => List.generate(4, (_) => getRandomSymbol()));
+  static void _replenishPool() {
+    final newPatterns = _generateInjectedPatternList(50);
+    patternPool.addAll(newPatterns);
+  }
+
+  static Future<void> initialize() async {
+    settings = await GameSettings.loadFromPrefs();
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey(_patternPoolKey)) {
+      final List<String>? stringList = prefs.getStringList(_patternPoolKey);
+      if (stringList != null && stringList.isNotEmpty) {
+        final loadedPool = stringList.map((s) => s == 'true');
+        patternPool = Queue.from(loadedPool);
+        return;
+      }
+    }
+    initializeOrResetPatternPool();
+  }
+
+  static void initializeOrResetPatternPool() {
+    patternPool.clear();
+    final initialPatterns = _generateInjectedPatternList(100);
+    patternPool.addAll(initialPatterns);
+    _savePatternPool();
+  }
+
+  static bool _getNextResultFromPool() {
+    if (patternPool.isEmpty) {
+      initializeOrResetPatternPool();
+    }
+    
+    bool result = patternPool.removeFirst();
+
+    if (patternPool.length <= 50) {
+      _replenishPool();
+    }
+
+    _savePatternPool();
+    return result;
+  }
+
+  static List<List<String>> _generateLiveWinningGrid(String winningSymbol) {
+    var grid = List.generate(4, (_) => List.filled(4, ''));
     final winTypes = ['horizontal', 'vertical', 'diagonal'];
     final selectedType = winTypes[_random.nextInt(winTypes.length)];
-    final winningSymbol = getRandomSymbol();
 
     if (selectedType == 'horizontal') {
       final row = _random.nextInt(4);
@@ -143,7 +237,76 @@ class GameLogic {
         }
       }
     }
+    
+    for (int row = 0; row < 4; row++) {
+      for (int col = 0; col < 4; col++) {
+        if (grid[row][col] == '') {
+          grid[row][col] = getRandomSymbol();
+        }
+      }
+    }
+    
     return grid;
+  }
+
+  static List<List<String>> _generateNearMissLosingGrid() {
+    List<List<String>> grid;
+    do {
+      grid = List.generate(4, (_) => List.filled(4, ''));
+
+      final highValueSymbols = ['💎', '💰'];
+      final baitSymbol = highValueSymbols[_random.nextInt(highValueSymbols.length)];
+      
+      String spoilerSymbol;
+      do {
+        spoilerSymbol = getRandomSymbol();
+      } while (spoilerSymbol == baitSymbol);
+
+      final lineTypes = ['horizontal', 'vertical', 'diagonal', 'anti-diagonal'];
+      final selectedLineType = lineTypes[_random.nextInt(lineTypes.length)];
+      final spoilerPosition = _random.nextInt(4);
+
+      if (selectedLineType == 'horizontal') {
+        final row = _random.nextInt(4);
+        for (int i = 0; i < 4; i++) {
+          grid[row][i] = (i == spoilerPosition) ? spoilerSymbol : baitSymbol;
+        }
+      } else if (selectedLineType == 'vertical') {
+        final col = _random.nextInt(4);
+        for (int i = 0; i < 4; i++) {
+          grid[i][col] = (i == spoilerPosition) ? spoilerSymbol : baitSymbol;
+        }
+      } else if (selectedLineType == 'diagonal') {
+        for (int i = 0; i < 4; i++) {
+          grid[i][i] = (i == spoilerPosition) ? spoilerSymbol : baitSymbol;
+        }
+      } else {
+        for (int i = 0; i < 4; i++) {
+          grid[i][3 - i] = (i == spoilerPosition) ? spoilerSymbol : baitSymbol;
+        }
+      }
+
+      for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < 4; c++) {
+          if (grid[r][c] == '') {
+            grid[r][c] = getRandomSymbol();
+          }
+        }
+      }
+    } while (checkWinLines(grid).isNotEmpty);
+
+    return grid;
+  }
+  
+  static List<List<String>> generateSymbols() {
+    bool isWin = _getNextResultFromPool();
+    
+    if (isWin) {
+      String winSymbol = getRandomSymbol();
+      return _generateLiveWinningGrid(winSymbol);
+    } else {
+      return _generateNearMissLosingGrid();
+    }
   }
 
   static void updateSettings(GameSettings newSettings) {
@@ -152,6 +315,19 @@ class GameLogic {
   }
 
   static String getRandomSymbol() {
+    if (settings.symbolRates.values.every((rate) => rate == 1.0)) {
+       final symbols = settings.symbolRates.keys.toList();
+       return symbols[_random.nextInt(symbols.length)];
+    }
+
+    final fullRateSymbol = settings.symbolRates.entries.firstWhere(
+      (entry) => entry.value == 1.0,
+      orElse: () => const MapEntry('', 0.0),
+    );
+    if (fullRateSymbol.key.isNotEmpty) {
+      return fullRateSymbol.key;
+    }
+
     final totalWeight = settings.symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
     double randomValue = _random.nextDouble() * totalWeight;
     double cumulative = 0.0;
@@ -162,7 +338,6 @@ class GameLogic {
         return entry.key;
       }
     }
-    
     return settings.symbolRates.keys.first;
   }
 
@@ -172,42 +347,10 @@ class GameLogic {
     await prefs.setInt('totalWins', 0);
     await prefs.setInt('totalLoses', 0);
     await prefs.remove('symbolFreq');
+    await prefs.remove(_patternPoolKey);
   }
-
-  static List<List<String>> generateSymbols({int spinCount = 0}) {
-    _manageSpinCycle(spinCount);
-
-    final bool shouldWin = _random.nextDouble() < _currentWinPercentage;
-
-    debugPrint("_______________________________________");
-    debugPrint("Win Percentage: $_currentWinPercentage");
-    debugPrint("Win Available: $_winAvailable");
-    debugPrint("_______________________________________");
-    // return _generateWinningGrid();
-
-    if (_winAvailable.round() == 0) {
-      _currentWinPercentage = 0.0;
-    }
-
-    if (_winAvailable > 0 && shouldWin) {
-      _winAvailable--;
-      return _generateWinningGrid();
-    } else {
-      if (_winAvailable > 0){
-        _currentWinPercentage += 0.1;
-      }
-
-      return List.generate(4, (row) {
-        return List.generate(4, (col) => getRandomSymbol());
-      });
-    }
-  }
-
+  
   static List<WinLine> checkWinLines(List<List<String>> grid) {
-
-  debugPrint("--- [LOGIC] Grid yang DITERIMA oleh checkWinLines: ---");
-  grid.forEach((row) => debugPrint(row.toString()));
-  debugPrint("-------------------------------------------------------");
     List<WinLine> winLines = [];
     final baseRewards = {
       '🍒': 3, '🍋': 4, '💎': 10, '💰': 15,
@@ -216,7 +359,7 @@ class GameLogic {
     
     for (int row = 0; row < 4; row++) {
       String symbol = grid[row][0];
-      if (symbol == '🎰') continue;
+      if (symbol == '🎰' || symbol == '') continue;
       bool win = true;
       for (int col = 1; col < 4; col++) {
         if (grid[row][col] != symbol) {
@@ -225,18 +368,21 @@ class GameLogic {
         }
       }
       if (win) {
-        winLines.add(WinLine(
-          lineType: 'horizontal',
-          row: row,
-          symbol: symbol,
-          reward: baseRewards[symbol]! * 4,
-        ));
+        final existingLine = winLines.any((line) => line.lineType == 'horizontal' && line.row == row);
+        if (!existingLine) {
+            winLines.add(WinLine(
+                lineType: 'horizontal',
+                row: row,
+                symbol: symbol,
+                reward: baseRewards[symbol]! * 4,
+            ));
+        }
       }
     }
    
     for (int col = 0; col < 4; col++) {
       String symbol = grid[0][col];
-      if (symbol == '🎰') continue;
+      if (symbol == '🎰' || symbol == '') continue;
       bool win = true;
       for (int row = 1; row < 4; row++) {
         if (grid[row][col] != symbol) {
@@ -245,47 +391,60 @@ class GameLogic {
         }
       }
       if (win) {
-        winLines.add(WinLine(
-          lineType: 'vertical',
-          col: col,
-          symbol: symbol,
-          reward: baseRewards[symbol]! * 4,
-        ));
+        final existingLine = winLines.any((line) => line.lineType == 'vertical' && line.col == col);
+        if (!existingLine) {
+            winLines.add(WinLine(
+                lineType: 'vertical',
+                col: col,
+                symbol: symbol,
+                reward: baseRewards[symbol]! * 4,
+            ));
+        }
       }
     }
     
     String mainDiagSymbol = grid[0][0];
-    bool mainDiagWin = mainDiagSymbol != '🎰';
-    for (int i = 1; i < 4; i++) {
-      if (grid[i][i] != mainDiagSymbol) {
-        mainDiagWin = false;
-        break;
-      }
-    }
-    if (mainDiagWin) {
-      winLines.add(WinLine(
-        lineType: 'diagonal',
-        symbol: mainDiagSymbol,
-        direction: 'down-right',
-        reward: baseRewards[mainDiagSymbol]! * 4,
-      ));
+    if (mainDiagSymbol != '🎰' && mainDiagSymbol != '') {
+        bool mainDiagWin = true;
+        for (int i = 1; i < 4; i++) {
+          if (grid[i][i] != mainDiagSymbol) {
+            mainDiagWin = false;
+            break;
+          }
+        }
+        if (mainDiagWin) {
+          final existingLine = winLines.any((line) => line.lineType == 'diagonal' && line.direction == 'down-right');
+          if (!existingLine) {
+              winLines.add(WinLine(
+                  lineType: 'diagonal',
+                  symbol: mainDiagSymbol,
+                  direction: 'down-right',
+                  reward: baseRewards[mainDiagSymbol]! * 4,
+              ));
+          }
+        }
     }
     
     String antiDiagSymbol = grid[0][3];
-    bool antiDiagWin = antiDiagSymbol != '🎰';
-    for (int i = 1; i < 4; i++) {
-      if (grid[i][3-i] != antiDiagSymbol) {
-        antiDiagWin = false;
-        break;
-      }
-    }
-    if (antiDiagWin) {
-      winLines.add(WinLine(
-        lineType: 'diagonal',
-        symbol: antiDiagSymbol,
-        direction: 'down-left',
-        reward: baseRewards[antiDiagSymbol]! * 4,
-      ));
+    if (antiDiagSymbol != '🎰' && antiDiagSymbol != '') {
+        bool antiDiagWin = true;
+        for (int i = 1; i < 4; i++) {
+          if (grid[i][3-i] != antiDiagSymbol) {
+            antiDiagWin = false;
+            break;
+          }
+        }
+        if (antiDiagWin) {
+          final existingLine = winLines.any((line) => line.lineType == 'diagonal' && line.direction == 'down-left');
+          if (!existingLine) {
+              winLines.add(WinLine(
+                  lineType: 'diagonal',
+                  symbol: antiDiagSymbol,
+                  direction: 'down-left',
+                  reward: baseRewards[antiDiagSymbol]! * 4,
+              ));
+          }
+        }
     }
     
     return winLines;
@@ -299,33 +458,6 @@ class GameLogic {
       case '💰': return Colors.green.shade100;
       case '🍊': return Colors.orange.shade100;
       default: return Colors.grey.shade200;
-    }
-  }
-
-  static void resetSettings() {
-    settings = GameSettings(
-      winPercentage: 0.5,
-      minSpinToWin: 5,
-      symbolRates: {
-        '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
-        '🍊': 0.20,
-      },
-    )..validateSymbolRates();
-  }
-
-  static bool isInForceWinPattern(int row, int col, String? winType, int? position) {
-    if (winType == null || position == null) return false;
-
-    switch (winType) {
-      case 'horizontal':
-        return row == position;
-      case 'vertical':
-        return col == position;
-      case 'diagonal':
-        if (position == 0) return row == col;
-        return row + col == 3;
-      default:
-        return false;
     }
   }
 }

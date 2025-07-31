@@ -113,12 +113,12 @@ class SpinPreparer {
     return patterns;
   }
 
-  static List<List<String>> _getRandomWinPattern(String symbol) {
+  static List<List<String>> getRandomWinPattern(String symbol) {
     final patterns = _winPatternsBySymbol[symbol] ?? _createFallbackWinPatterns(symbol);
     return patterns[_random.nextInt(patterns.length)];
   }
 
-  static List<List<String>> _getRandomLosePattern() {
+  static List<List<String>> getRandomLosePattern() {
     if (_losePatterns.isEmpty) {
       return _createFallbackLosePatterns(1).first;
     }
@@ -144,13 +144,13 @@ class SpinPreparer {
 
     // Spin awal di bawah minSpinToWin: dijamin kalah
     for (int i = 0; i < minSpin; i++) {
-      result.add(_getRandomLosePattern());
+      result.add(getRandomLosePattern());
     }
 
     // Spin setelah minSpinToWin: campuran menang dan kalah
     for (int i = 0; i < winCount; i++) {
       final symbol = winSymbols[i];
-      var winPattern = _getRandomWinPattern(symbol);
+      var winPattern = getRandomWinPattern(symbol);
       
       // Jika ada fullRateSymbol, pastikan hanya simbol itu yang digunakan untuk kemenangan
       if (fullRateSymbol != null) {
@@ -163,7 +163,7 @@ class SpinPreparer {
     // Isi sisa dengan spin kalah
     final remaining = totalSpins - minSpin - winCount;
     for (int i = 0; i < remaining; i++) {
-      result.add(_getRandomLosePattern());
+      result.add(getRandomLosePattern());
     }
 
     // Acak urutan spin (kecuali spin awal yang dijamin kalah)

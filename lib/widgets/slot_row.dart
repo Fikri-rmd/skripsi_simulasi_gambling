@@ -1,6 +1,6 @@
-import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:flutter/material.dart';
 import 'slot_column.dart';
+import 'package:simulasi_slot/utils/game_logic.dart';
 
 class SlotRow extends StatelessWidget {
   final int rowIndex;
@@ -21,9 +21,7 @@ class SlotRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 70,
-      margin: const EdgeInsets.symmetric(vertical: 6),
+    return Flexible(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: symbols.asMap().entries.map((entry) {
@@ -40,20 +38,22 @@ class SlotRow extends StatelessWidget {
                 if (line.direction == 'down-right') {
                   return rowIndex == colIndex;
                 } else if (line.direction == 'down-left') {
-                  return rowIndex + colIndex == 3; // Assuming 4 rows/columns
+                  return rowIndex + colIndex == 3;
                 }
                 return false;
               default:
                 return false;
             }
           });
-          return SlotColumn(
-            row: rowIndex,
-            col: colIndex,
-            finalSymbol: entry.value,
-            isRolling: isRolling[colIndex],
-            controller: scrollControllers[colIndex],
-            isWinningSymbol: isWinning,
+          return Expanded(
+            child: SlotColumn(
+              row: rowIndex,
+              col: colIndex,
+              finalSymbol: entry.value,
+              isRolling: isRolling[colIndex],
+              controller: scrollControllers[colIndex],
+              isWinningSymbol: isWinning,
+            ),
           );
         }).toList(),
       ),
