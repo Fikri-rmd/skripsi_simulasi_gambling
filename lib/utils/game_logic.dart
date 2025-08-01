@@ -138,7 +138,7 @@ class GameLogic {
     sourcePatterns.shuffle(_random);
 
     final List<bool> finalPool = [];
-    int lossesSinceWin = minSpinGap;
+    int lossesSinceWin = 0;
 
     for (final pattern in sourcePatterns) {
       if (finalPool.length >= totalPatterns) break;
