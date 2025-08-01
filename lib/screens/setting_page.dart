@@ -300,27 +300,28 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     }).toList();
   }
 
-  Future<void> _showValidationDialog(String message) {
-    return showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pengaturan Tidak Valid'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('MENGERTI',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-          ),)
-        ],
-      ),
-    );
-  }
-
-  Future<void> _saveSettings() async {
-    final totalProbability = _totalSymbolRate;
-    if ((totalProbability - 1.0).abs() > 0.001) {
-      _showValidationDialog('Total probabilitas semua simbol harus tepat 100%. Saat ini totalnya adalah ${(totalProbability * 100).toStringAsFixed(0)}%.');
+ Future <void> _saveSettings() async {
+    try {
+      double totalProbability = _symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
+      int activeSymbolCount = _symbolRates.values.where((rate) => rate > 0).length;
+    if (totalProbability <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Total probabilitas tidak boleh 0%!'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    } 
+    if (activeSymbolCount < 5){
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Minimal 5 simbol harus memiliki probabilitas > 0%!'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
       return;
     }
 
