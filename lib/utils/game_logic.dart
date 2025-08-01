@@ -47,6 +47,11 @@ class GameSettings {
     if ((total - 1.0).abs() > 0.001) {
       throw Exception("Total symbol rates must be 100%");
     }
+    final activeSymbols = symbolRates.values.where((rate) => rate > 0).length;
+    if (winPercentage < 1.0 && activeSymbols < 2) {
+    throw Exception(
+        "Pengaturan tidak valid: Mustahil menghasilkan kekalahan jika hanya ada satu simbol aktif. Naikkan persentase kemenangan menjadi 100% atau aktifkan simbol kedua.");
+  }
   }
 
   Future<void> saveToPrefs() async {

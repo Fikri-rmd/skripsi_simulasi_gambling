@@ -320,6 +320,12 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
       _showValidationDialog('Total probabilitas semua simbol harus tepat 100%. Saat ini totalnya adalah ${(totalProbability * 100).toStringAsFixed(0)}%.');
       return;
     }
+    final activeSymbols = _symbolRates.values.where((v) => v > 0).length;
+    if (_winPercentage < 1.0 && activeSymbols < 2) {
+      _showValidationDialog(
+          'Pengaturan tidak valid: Mustahil menghasilkan kekalahan jika hanya ada satu simbol aktif. Naikkan persentase kemenangan menjadi 100% atau aktifkan simbol kedua.');
+      return;
+    }
 
     try {
       final newSettings = GameSettings(
@@ -346,6 +352,8 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
       widget.onSaveAndSwitchToSlot?.call();
 
     } catch (e) {
+      final errorMessage = e.toString().replaceAll("Exception: ", "");
+      _showValidationDialog(errorMessage);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
