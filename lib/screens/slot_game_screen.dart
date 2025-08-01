@@ -145,7 +145,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   void _resetGame() async{
     await _saveSpinCounter();
     await GameLogic.resetStatistics();
-    GameLogic.initializeOrResetPatternPool();
     setState(()  {
       _coins = 500;
       _spinCount = 0;

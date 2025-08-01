@@ -66,8 +66,8 @@ class GameSettings {
     int minSpinToWin = prefs.getInt('minSpinToWin') ?? 5;
     
     Map<String, double> defaultRates = {
-      '🍒': 0.25, '🍋': 0.25, '💎': 0.20, '💰': 0.15,
-      '🍊': 0.15,
+      '🍒': 0.25, '🍋': 0.25, '💎': 0.15, '💰': 0.15,
+      '🍊': 0.20,
     };
     
     Map<String, double> symbolRates = {};
@@ -107,109 +107,74 @@ class GameSettings {
 class GameLogic {
   static final Random _random = Random();
   static GameSettings settings = GameSettings(
-    winPercentage: 0.2,
+    winPercentage: 0.5,
     minSpinToWin: 5,
     symbolRates: {
-      '🍒': 0.25, '🍋': 0.25, '💎': 0.20, '💰': 0.15,
-      '🍊': 0.15,
+      '🍒': 0.25, '🍋': 0.25, '💎': 0.15, '💰': 0.15,
+      '🍊': 0.20,
     },
   )..validateSymbolRates();
 
-  static Queue<bool> patternPool = Queue<bool>();
-  static const String _patternPoolKey = 'patternPool';
+  static Queue<bool> activeCyclePool = Queue<bool>();
+  static const int CYCLE_LENGTH = 10;
+  static const String _spinsSinceLastWinKey = 'spinsSinceLastWin';
+  static int spinsSinceLastWin = 0;
+  static bool _isCooldownActive = false;
+  static const String _isCooldownActiveKey = 'isCooldownActive';
 
-  static Future<void> _savePatternPool() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> stringList = patternPool.map((b) => b.toString()).toList();
-    await prefs.setStringList(_patternPoolKey, stringList);
-  }
   
-  static List<bool> _generateInjectedPatternList(int totalPatterns) {
-    final int winCount = (settings.winPercentage * totalPatterns).round();
-    final int loseCount = totalPatterns - winCount;
-    final int minSpinGap = settings.minSpinToWin;
-
-    if (winCount == 0) {
-      return List.generate(totalPatterns, (_) => false);
-    }
-    
-    final sourcePatterns = List.generate(winCount, (_) => true)
-      ..addAll(List.generate(loseCount, (_) => false));
-    sourcePatterns.shuffle(_random);
-
-    final List<bool> finalPool = [];
-    int lossesSinceWin = minSpinGap;
-
-    for (final pattern in sourcePatterns) {
-      if (finalPool.length >= totalPatterns) break;
-
-      if (pattern == true) {
-        final int lossesToInject = minSpinGap - lossesSinceWin;
-        if (lossesToInject > 0) {
-          for (int i = 0; i < lossesToInject; i++) {
-            if (finalPool.length >= totalPatterns) break;
-            finalPool.add(false);
-          }
-        }
-        if (finalPool.length < totalPatterns) {
-          finalPool.add(true);
-        }
-        lossesSinceWin = 0;
-      } else {
-        if (finalPool.length < totalPatterns) {
-          finalPool.add(false);
-          lossesSinceWin++;
-        }
-      }
-    }
-
-    while (finalPool.length < totalPatterns) {
-      finalPool.add(false);
-    }
-
-    return finalPool;
-  }
-
-  static void _replenishPool() {
-    final newPatterns = _generateInjectedPatternList(50);
-    patternPool.addAll(newPatterns);
-  }
-
   static Future<void> initialize() async {
     settings = await GameSettings.loadFromPrefs();
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.containsKey(_patternPoolKey)) {
-      final List<String>? stringList = prefs.getStringList(_patternPoolKey);
-      if (stringList != null && stringList.isNotEmpty) {
-        final loadedPool = stringList.map((s) => s == 'true');
-        patternPool = Queue.from(loadedPool);
-        return;
-      }
-    }
-    initializeOrResetPatternPool();
+    spinsSinceLastWin = prefs.getInt(_spinsSinceLastWinKey) ?? 0;
+    _isCooldownActive = prefs.getBool(_isCooldownActiveKey) ?? false;
   }
 
-  static void initializeOrResetPatternPool() {
-    patternPool.clear();
-    final initialPatterns = _generateInjectedPatternList(100);
-    patternPool.addAll(initialPatterns);
-    _savePatternPool();
-  }
-
-  static bool _getNextResultFromPool() {
-    if (patternPool.isEmpty) {
-      initializeOrResetPatternPool();
-    }
+  static void _createNewCycle() {
+    activeCyclePool.clear();
     
-    bool result = patternPool.removeFirst();
+    final int winCount = (CYCLE_LENGTH * settings.winPercentage).round();
+    final int loseCount = CYCLE_LENGTH - winCount;
 
-    if (patternPool.length <= 50) {
-      _replenishPool();
-    }
-
-    _savePatternPool();
-    return result;
+    final cyclePatterns = List.generate(winCount, (_) => true)
+      ..addAll(List.generate(loseCount, (_) => false));
+      
+    cyclePatterns.shuffle(_random);
+    activeCyclePool.addAll(cyclePatterns);
   }
+
+  static Future<void> _saveSpinsSinceLastWin() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_spinsSinceLastWinKey, spinsSinceLastWin);
+  }
+
+  static List<List<String>> generateSymbols() {
+    bool isWin;
+
+    if (_isCooldownActive && spinsSinceLastWin < settings.minSpinToWin) {
+      isWin = false;
+      spinsSinceLastWin++;
+      _saveSpinsSinceLastWin();
+      if (spinsSinceLastWin >= settings.minSpinToWin) {
+        _isCooldownActive = false;
+        final prefs = SharedPreferences.getInstance();
+        prefs.then((p) => p.setBool(_isCooldownActiveKey, false));
+      }
+    }else {
+      if (activeCyclePool.isEmpty) {
+      _createNewCycle();
+    }
+    isWin = activeCyclePool.removeFirst();
+  }
+  if (isWin) {
+    String winSymbol = getRandomSymbol();
+    return _generateLiveWinningGrid(winSymbol);
+  } else {
+    return _generateNearMissLosingGrid();
+  }
+}
+ 
+
 
   static List<List<String>> _generateLiveWinningGrid(String winningSymbol) {
     var grid = List.generate(4, (_) => List.filled(4, ''));
@@ -297,21 +262,15 @@ class GameLogic {
 
     return grid;
   }
-  
-  static List<List<String>> generateSymbols() {
-    bool isWin = _getNextResultFromPool();
-    
-    if (isWin) {
-      String winSymbol = getRandomSymbol();
-      return _generateLiveWinningGrid(winSymbol);
-    } else {
-      return _generateNearMissLosingGrid();
-    }
-  }
-
-  static void updateSettings(GameSettings newSettings) {
+ 
+  static Future<void> updateSettings(GameSettings newSettings) async {
     settings = newSettings;
     settings.validateSymbolRates();
+    spinsSinceLastWin = 0;
+    _isCooldownActive = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_isCooldownActiveKey, _isCooldownActive);
+    await _saveSpinsSinceLastWin(); 
   }
 
   static String getRandomSymbol() {
@@ -347,7 +306,11 @@ class GameLogic {
     await prefs.setInt('totalWins', 0);
     await prefs.setInt('totalLoses', 0);
     await prefs.remove('symbolFreq');
-    await prefs.remove(_patternPoolKey);
+    await prefs.remove(_spinsSinceLastWinKey);
+    await prefs.remove(_isCooldownActiveKey);
+    spinsSinceLastWin = 0;
+    _isCooldownActive = false;
+    activeCyclePool.clear();
   }
   
   static List<WinLine> checkWinLines(List<List<String>> grid) {
