@@ -116,7 +116,7 @@ class GameLogic {
   )..validateSymbolRates();
 
   static Queue<bool> activeCyclePool = Queue<bool>();
-  static const int CYCLE_LENGTH = 10;
+  static const int cycleLength = 10;
   static const String _spinsSinceLastWinKey = 'spinsSinceLastWin';
   static int spinsSinceLastWin = 0;
   static bool _isCooldownActive = false;
@@ -133,8 +133,8 @@ class GameLogic {
   static void _createNewCycle() {
     activeCyclePool.clear();
     
-    final int winCount = (CYCLE_LENGTH * settings.winPercentage).round();
-    final int loseCount = CYCLE_LENGTH - winCount;
+    final int winCount = (cycleLength * settings.winPercentage).round();
+    final int loseCount = cycleLength - winCount;
 
     final cyclePatterns = List.generate(winCount, (_) => true)
       ..addAll(List.generate(loseCount, (_) => false));
