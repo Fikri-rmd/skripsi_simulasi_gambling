@@ -3,15 +3,11 @@ import 'package:flutter/material.dart';
 class WinLossDialog extends StatelessWidget {
   final String message;
   final bool isWin;
-  final bool isSpinning;
-  final VoidCallback onDialogClosed;
 
   const WinLossDialog({
     super.key,
     required this.message,
     required this.isWin,
-    required this.isSpinning,
-    required this.onDialogClosed,
   });
 
   @override
@@ -40,7 +36,6 @@ class WinLossDialog extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              onDialogClosed();
             },
             child: Text(
               'OK',

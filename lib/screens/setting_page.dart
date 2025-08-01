@@ -1,6 +1,5 @@
-import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:flutter/material.dart';
-
+import 'package:simulasi_slot/utils/game_logic.dart';
 
 class ProbabilitySettingsPage extends StatefulWidget {
   final double initialWinPercentage;
@@ -9,17 +8,14 @@ class ProbabilitySettingsPage extends StatefulWidget {
   final VoidCallback? onSettingsUpdated;
   final VoidCallback? onSaveAndSwitchToSlot;
 
-
   const ProbabilitySettingsPage({
     Key? key,
     required this.initialWinPercentage,
     required this.initialMinSpinToWin,
     required this.initialSymbolRates,
-    this.onSettingsUpdated ,
+    this.onSettingsUpdated,
     this.onSaveAndSwitchToSlot,
   }) : super(key: key);
-
-
 
   @override
   // ignore: library_private_types_in_public_api
@@ -30,7 +26,6 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
   late double _winPercentage;
   late int _minSpinToWin;
   late Map<String, double> _symbolRates;
-  // late SharedPreferences _prefs;
 
   @override
   void initState() {
@@ -39,29 +34,33 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     _minSpinToWin = widget.initialMinSpinToWin;
     _symbolRates = Map<String, double>.from(widget.initialSymbolRates);
   }
+
+  double get _totalSymbolRate => _symbolRates.values.fold(0.0, (a, b) => a + b);
+
   void _resetToDefaultSettings() {
-  setState(() {
-    _winPercentage = 0.5;
-    _minSpinToWin = 5;
-    _symbolRates = {
-      '🍒': 0.30, '🍋': 0.30, '💎': 0.10, '💰': 0.10,
-      '🍊': 0.20,
-    };
-  });
+    setState(() {
+      _winPercentage = 0.5;
+      _minSpinToWin = 5;
+      _symbolRates = {
+        '🍒': 0.30,
+        '🍋': 0.30,
+        '💎': 0.10,
+        '💰': 0.10,
+        '🍊': 0.20,
+      };
+    });
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Pengaturan telah di-reset ke default.'),
-      duration: Duration(seconds: 2),
-    ),
-  );
-}
-
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pengaturan telah di-reset ke default.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Hapus AppBar dari sini
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(10),
         child: Column(
@@ -84,7 +83,6 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               ),
             ),
             const SizedBox(height: 20),
-
             
             _buildSectionHeader('Persentase Kemenangan Umum'),
             _buildWinPercentageSetting(),
@@ -95,51 +93,51 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
             
             const SizedBox(height: 10),
             _buildSectionHeader('Persentase Kemunculan per Simbol'),
+            _buildTotalProbabilityIndicator(),
             ..._buildSymbolSettings(),
             
-            // Tombol simpan di bagian bawah
             Padding(
               padding: const EdgeInsets.only(top: 30, bottom: 20),
               child: Center(
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.save, size: 24),
-                  label: const Text('SIMPAN', 
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  label: const Text('SIMPAN',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red.shade900,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
+                        borderRadius: BorderRadius.circular(16)),
                   ),
                   onPressed: _saveSettings,
                 ),
               ),
             ),
             Padding(
-  padding: const EdgeInsets.only(bottom: 30),
-  child: Center(
-    child: ElevatedButton.icon(
-      icon: const Icon(Icons.restore, size: 24),
-      label: const Text(
-        'RESET',
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey.shade800,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 30),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+              padding: const EdgeInsets.only(bottom: 30),
+              child: Center(
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.restore, size: 24),
+                  label: const Text(
+                    'RESET',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade800,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 30),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: _resetToDefaultSettings,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      onPressed: _resetToDefaultSettings,
-    ),
-  ),
-),
-                ],
-          ),
-        ),
     );
   }
 
@@ -153,6 +151,43 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
           fontWeight: FontWeight.bold,
           color: Colors.red,
         ),
+      ),
+    );
+  }
+
+  Widget _buildTotalProbabilityIndicator() {
+    final total = _totalSymbolRate;
+    final isTotalValid = (total - 1.0).abs() < 0.001;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: isTotalValid ? Colors.green.shade50 : Colors.red.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isTotalValid ? Colors.green.shade300 : Colors.red.shade300,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Total Probabilitas:',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isTotalValid ? Colors.green.shade800 : Colors.red.shade800),
+          ),
+          Text(
+            '${(total * 100).toStringAsFixed(0)}%',
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isTotalValid ? Colors.green.shade800 : Colors.red.shade800),
+          ),
+        ],
       ),
     );
   }
@@ -247,7 +282,7 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
                 min: 0.0,
                 max: 1.0,
                 divisions: 20,
-                label: '${(entry.value * 100).toStringAsFixed(1)}%', 
+                label: '${(entry.value * 100).toStringAsFixed(1)}%',
                 onChanged: (value) {
                   setState(() {
                     _symbolRates[entry.key] = value;
@@ -258,12 +293,6 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
                 '${(entry.value * 100).toStringAsFixed(1)}%',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 10),
-              const Text(
-                '0% = tidak pernah muncul | 100% = selalu muncul',
-                style: TextStyle(fontSize: 12, color: Colors.black),
-                textAlign: TextAlign.center,
-              ),
             ],
           ),
         ),
@@ -271,72 +300,64 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     }).toList();
   }
 
- Future <void> _saveSettings() async {
-    try {
-      double totalProbability = _symbolRates.values.fold(0.0, (sum, rate) => sum + rate);
-      int activeSymbolCount = _symbolRates.values.where((rate) => rate > 0).length;
-    if (totalProbability <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Total probabilitas tidak boleh 0%!'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    } 
-    if (activeSymbolCount < 5){
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Minimal 5 simbol harus memiliki probabilitas > 0%!'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-    final fullSymbols = _symbolRates.entries.where((e) => e.value == 1.0).toList();
-    if (fullSymbols.length > 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Hanya boleh ada 1 simbol dengan probabilitas 100%!'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;  
-    }
-     // Buat objek settings baru
-    final newSettings = GameSettings(
-      winPercentage: _winPercentage,
-      minSpinToWin: _minSpinToWin,
-      symbolRates: _symbolRates,
+  Future<void> _showValidationDialog(String message) {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Pengaturan Tidak Valid'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('MENGERTI',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+          ),)
+        ],
+      ),
     );
-    
-    // Simpan ke SharedPreferences
-    await newSettings.saveToPrefs();
-    GameLogic.updateSettings(newSettings);
-    Future.microtask(() {
-  widget.onSettingsUpdated?.call(); // dijalankan setelah state lifecycle selesai
-});
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pengaturan berhasil disimpan!'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    // await Future.delayed(const Duration(milliseconds: 500));
-    widget.onSaveAndSwitchToSlot?.call();
+  }
 
-    // Kembalikan ke halaman sebelumnya
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal menyimpan pengaturan: $e'),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+  Future<void> _saveSettings() async {
+    final totalProbability = _totalSymbolRate;
+    if ((totalProbability - 1.0).abs() > 0.001) {
+      _showValidationDialog('Total probabilitas semua simbol harus tepat 100%. Saat ini totalnya adalah ${(totalProbability * 100).toStringAsFixed(0)}%.');
+      return;
     }
-    // Navigator.pop(context, newSettings);
+
+    try {
+      final newSettings = GameSettings(
+        winPercentage: _winPercentage,
+        minSpinToWin: _minSpinToWin,
+        symbolRates: _symbolRates,
+      );
+
+      await newSettings.saveToPrefs();
+      GameLogic.updateSettings(newSettings);
+      GameLogic.initializeOrResetPatternPool();
+
+      Future.microtask(() {
+        widget.onSettingsUpdated?.call();
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pengaturan berhasil disimpan!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      widget.onSaveAndSwitchToSlot?.call();
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan pengaturan: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 }

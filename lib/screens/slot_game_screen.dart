@@ -1,5 +1,3 @@
-
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,12 +10,9 @@ import 'package:simulasi_slot/screens/profile_page.dart';
 import 'package:simulasi_slot/screens/setting_page.dart';
 import 'package:simulasi_slot/services/user_service.dart';
 import 'package:simulasi_slot/utils/game_logic.dart';
-import 'package:simulasi_slot/utils/spin_preparer.dart';
 import 'package:simulasi_slot/widgets/bottom_nav_bar.dart';
 import 'package:simulasi_slot/widgets/slot_machine.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-
 
 class SlotGameScreen extends StatefulWidget {
   final bool isGuest;
@@ -29,7 +24,6 @@ class SlotGameScreen extends StatefulWidget {
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 500;
-  List<List<List<String>>> _queuedSpins = [];
   List<WinLine> _winLines = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   int _totalSpinCounter = 0;
@@ -43,93 +37,76 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   int _winCount = 0;
   int _loseCount = 0;
 
-
   @override
-void initState() {
-  super.initState();
-  _initAll(); // <- async function non-await
-  _initUserData();
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    final prefs = await SharedPreferences.getInstance();
-    final isFirstRun = prefs.getBool('first_run') ?? true;
-    
-    if (isFirstRun) {
-      await _resetGameStatistics();
-      GameLogic.generateSymbols(spinCount: _spinCount);
-      await prefs.setBool('first_run', false);
-    }
-  });
-  _pageController = PageController(initialPage: _currentNavIndex);
-  if (widget.isGuest) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Anda masuk dalam mode tamu. Data tidak akan disimpan.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+  void initState() {
+    super.initState();
+    _initAll();
+    _initUserData();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      final isFirstRun = prefs.getBool('first_run') ?? true;
+      
+      if (isFirstRun) {
+        await _resetGameStatistics();
+        await prefs.setBool('first_run', false);
+      }
     });
-  }
-  _initScrollControllers();
-}
-  Future<void> _initAll() async {
-  await _loadSettings();
-  await _loadSpinCounter(); 
-  await _loadStatistics();
-  GameLogic.generateSymbols(spinCount: _spinCount);
- _queuedSpins = await SpinPreparer.prepareSpins(
-  totalSpins: 100,
-  currentSpinCount: _totalSpinCounter,
-  settings: GameLogic.settings,
-);
-  setState(() {}); // update setelah spin siap
-}
-void _handleSettingsUpdated() async {
-  final newSpins = await SpinPreparer.prepareSpins(
-  totalSpins: 100,
-  currentSpinCount: _totalSpinCounter,
-  settings: GameLogic.settings,
-);
-
-  setState(() {
-    _queuedSpins = newSpins;
-  });
-}
-
-Future<void> _resetGameStatistics() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setInt('totalSpinCounter', 0);
-  await prefs.setInt('totalWins', 0);
-  await prefs.setInt('totalLoses', 0);
-  await prefs.remove('symbolFreq');
-  await prefs.remove('winPercentage');
-  await prefs.remove('minSpinToWin');
-  final keys = prefs.getKeys();
-  for (String key in keys) {
-    if (key.startsWith('symbol_')) {
-      await prefs.remove(key);
+    _pageController = PageController(initialPage: _currentNavIndex);
+    if (widget.isGuest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anda masuk dalam mode tamu. Data tidak akan disimpan.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      });
     }
+    _initScrollControllers();
+  }
+
+  Future<void> _initAll() async {
+    await GameLogic.initialize();
+    await _loadSpinCounter(); 
+    await _loadStatistics();
+    setState(() {});
   }
   
-  setState(() {
-    _totalSpinCounter = 0;
-    _winCount = 0;
-    _loseCount = 0;
-    _symbolFrequency = {};
-  });
-}
-
-Future<void> _loadStatistics() async {
-  final prefs = await SharedPreferences.getInstance();
-  _winCount = prefs.getInt('totalWins') ?? 0;
-  _loseCount = prefs.getInt('totalLoses') ?? 0;
-
-  final json = prefs.getString('symbolFreq');
-  if (json != null) {
-    final decoded = jsonDecode(json);
-    _symbolFrequency = Map<String, int>.from(decoded);
+  void _handleSettingsUpdated() {
+    setState(() {});
   }
-}
+
+  Future<void> _resetGameStatistics() async {
+    await GameLogic.resetStatistics();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('winPercentage');
+    await prefs.remove('minSpinToWin');
+    final keys = prefs.getKeys();
+    for (String key in keys) {
+      if (key.startsWith('symbol_')) {
+        await prefs.remove(key);
+      }
+    }
+    
+    setState(() {
+      _totalSpinCounter = 0;
+      _winCount = 0;
+      _loseCount = 0;
+      _symbolFrequency = {};
+    });
+  }
+
+  Future<void> _loadStatistics() async {
+    final prefs = await SharedPreferences.getInstance();
+    _winCount = prefs.getInt('totalWins') ?? 0;
+    _loseCount = prefs.getInt('totalLoses') ?? 0;
+
+    final json = prefs.getString('symbolFreq');
+    if (json != null) {
+      final decoded = jsonDecode(json);
+      _symbolFrequency = Map<String, int>.from(decoded);
+    }
+  }
 
   void _initScrollControllers() {
     _scrollControllers = List.generate(4, (i) => List.generate(4, (j) => ScrollController()));
@@ -155,36 +132,25 @@ Future<void> _loadStatistics() async {
     }
   }
 
-  Future<void> _loadSettings() async {
-    final settings = await GameSettings.loadFromPrefs();
-    GameLogic.updateSettings(settings);
-  }
   Future<void> _saveSpinCounter() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setInt('totalSpinCounter', _totalSpinCounter);
-}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('totalSpinCounter', _totalSpinCounter);
+  }
 
-Future<void> _loadSpinCounter() async {
-  final prefs = await SharedPreferences.getInstance();
-  _totalSpinCounter = prefs.getInt('totalSpinCounter') ?? 0;
-}
-
+  Future<void> _loadSpinCounter() async {
+    final prefs = await SharedPreferences.getInstance();
+    _totalSpinCounter = prefs.getInt('totalSpinCounter') ?? 0;
+  }
 
   void _resetGame() async{
-    final newSpins = await SpinPreparer.prepareSpins(
-      totalSpins: 100,
-      currentSpinCount: _totalSpinCounter,
-      settings: GameLogic.settings,
-    );
     await _saveSpinCounter();
     await GameLogic.resetStatistics();
-    await GameLogic.generateSymbols(spinCount: _spinCount);
+    GameLogic.initializeOrResetPatternPool();
     setState(()  {
       _coins = 500;
       _spinCount = 0;
       _totalSpinCounter = 0;
       _winCount = 0;
-      _queuedSpins = newSpins;
       _rows = List.generate(4, (_) => List.filled(4, '🎰'));
       _initScrollControllers();
       _isSpinning = false;
@@ -204,96 +170,88 @@ Future<void> _loadSpinCounter() async {
 
   Future<void> _spin() async {
     if (_coins < 10 || _isSpinning) return;
+    
     setState(() {
       _spinCount++;
-    });
-    await GameLogic.generateSymbols(spinCount: _spinCount);
-    setState(() {
       _coins -= 10;
       _isSpinning = true;
       _winLines = [];
       _totalSpinCounter++;
     });
     await _saveSpinCounter();
-//      if (_queuedSpins.isEmpty) {
-//     _queuedSpins = await SpinPreparer.prepareSpins(
-//   totalSpins: 100,
-//   currentSpinCount: _totalSpinCounter,
-//   settings: GameLogic.settings,
-// );
-//   }
 
-  final newSymbols = GameLogic.generateSymbols(spinCount: _spinCount);
+    final newSymbols = GameLogic.generateSymbols();
 
-  List<Future> animations = [];
-  for (int row = 0; row < 4; row++) {
-    for (int col = 0; col < 4; col++) {
-      final delay = (row * 4 + col) * 100;
-      animations.add(
-        Future.delayed(
-          Duration(milliseconds: delay),
-          () => _startRollingAnimation(row, col, newSymbols[row][col]),
-        ),
-      );
+    List<Future> animations = [];
+    for (int row = 0; row < 4; row++) {
+      for (int col = 0; col < 4; col++) {
+        final delay = (row * 4 + col) * 100;
+        animations.add(
+          Future.delayed(
+            Duration(milliseconds: delay),
+            () => _startRollingAnimation(row, col, newSymbols[row][col]),
+          ),
+        );
+      }
+    }
+
+    await Future.wait(animations);
+
+    setState(() {
+      _rows = newSymbols;
+      for (var row in newSymbols) {
+        for (var symbol in row) {
+          _symbolFrequency[symbol] = (_symbolFrequency[symbol] ?? 0) + 1;
+        }
+      }
+    });
+
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (mounted) {
+      _checkWin();
     }
   }
 
-  await Future.wait(animations);
-
-  setState(() {
-    _rows = newSymbols;
-    for (var row in newSymbols) {
-  for (var symbol in row) {
-    _symbolFrequency[symbol] = (_symbolFrequency[symbol] ?? 0) + 1;
-  }
-}
-  });
-
-  await Future.delayed(const Duration(milliseconds: 1000));
-  if (mounted) {
-    _checkWin();
-  }
-  }
-
   Future<void> _startRollingAnimation(int row, int col, String finalSymbol) async {
-    // 1. Set status rolling = true
-  setState(() => _isRolling[row][col] = true);
-  
-  // 2. Siapkan simbol-simbol acak (30 simbol)
-  const int rollingItems = 30;
-  List<String> rollingSymbols = List.generate(rollingItems, (_) => GameLogic.getRandomSymbol());
-  
-  // 4. Tambahkan simbol akhir
-  rollingSymbols.add(finalSymbol);
+    if (!mounted) return;
+    setState(() => _isRolling[row][col] = true);
+    
+    const int rollingItems = 30;
+    List<String> rollingSymbols = List.generate(rollingItems, (_) => GameLogic.getRandomSymbol());
+    
+    rollingSymbols.add(finalSymbol);
 
-  const double itemHeight = 70.0; 
-  final double targetOffset = (rollingSymbols.length - 1) * itemHeight;
+    const double itemHeight = 70.0; 
+    final double targetOffset = (rollingSymbols.length - 1) * itemHeight;
 
-  _scrollControllers[row][col].jumpTo(0); // Reset posisi awal
+    if (_scrollControllers[row][col].hasClients) {
+      _scrollControllers[row][col].jumpTo(0);
 
-  await _scrollControllers[row][col].animateTo(
-    targetOffset * 0.7,
-    duration: const Duration(milliseconds: 3000),
-    curve: Curves.easeIn,
-  );
+      await _scrollControllers[row][col].animateTo(
+        targetOffset * 0.7,
+        duration: const Duration(milliseconds: 3000),
+        curve: Curves.easeIn,
+      );
 
-  await _scrollControllers[row][col].animateTo(
-    targetOffset,
-    duration: const Duration(milliseconds: 1100),
-    curve: Curves.easeInOut,
-  );
+      await _scrollControllers[row][col].animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
 
-  setState(() {
-    _isRolling[row][col] = false; // Set status rolling = false
-    _rows[row][col] = finalSymbol; // Update simbol akhir
-  });
+    if (mounted) {
+      setState(() {
+        _isRolling[row][col] = false;
+        _rows[row][col] = finalSymbol;
+      });
+    }
   }
 
   void _checkWin() {
     _winLines = GameLogic.checkWinLines(_rows);
     bool won = _winLines.isNotEmpty;
 
-    // Update statistik
     if (won) {
       _winCount++;
       int totalReward = _winLines.fold(0, (sum, line) => sum + line.reward);
@@ -301,7 +259,6 @@ Future<void> _loadSpinCounter() async {
         _coins += totalReward;
       });
 
-      // Format detail kemenangan
       String details = _winLines.map((line) {
         String position = "";
         switch (line.lineType) {
@@ -332,11 +289,11 @@ Future<void> _loadSpinCounter() async {
     _saveStatistics();
   }
   Future<void> _saveStatistics() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setInt('totalWins', _winCount);
-  await prefs.setInt('totalLoses', _loseCount);
-  await prefs.setString('symbolFreq', jsonEncode(_symbolFrequency));
-}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('totalWins', _winCount);
+    await prefs.setInt('totalLoses', _loseCount);
+    await prefs.setString('symbolFreq', jsonEncode(_symbolFrequency));
+  }
 
   Future<void> _saveGameHistory(bool isWin, int amount, String details) async {
     if (widget.isGuest) return;
@@ -353,6 +310,7 @@ Future<void> _loadSpinCounter() async {
         'minSpin': GameLogic.settings.minSpinToWin,
       });
     } catch (e) {
+      // ignore: avoid_print
       print('Error saving game history: $e');
     }
   }
@@ -361,16 +319,16 @@ Future<void> _loadSpinCounter() async {
     showDialog(
       context: context,
       builder: (context) => WinLossDialog(
-        isSpinning: _isSpinning,
         message: message,
         isWin: isWin,
-        onDialogClosed: () => {
-          setState(() {
-            _isSpinning = false;
-          })
-        }
       ),
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _isSpinning = false;
+        });
+      }
+    });
   }
 
   void _showHelp() {
@@ -386,7 +344,6 @@ Future<void> _loadSpinCounter() async {
       _pageController.jumpToPage(index);
     });
   }
-
 
   Widget _buildSlotScreen() {
     return Column(
@@ -404,7 +361,6 @@ Future<void> _loadSpinCounter() async {
           ),
         ),
         Text('Menang: $_winCount | Kalah: $_loseCount'),
-        // Text('Simbol populer: ${_getMostFrequentSymbol()}'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: ElevatedButton.icon(
@@ -525,11 +481,11 @@ Future<void> _loadSpinCounter() async {
             initialSymbolRates: GameLogic.settings.symbolRates,
             onSettingsUpdated: _handleSettingsUpdated,
             onSaveAndSwitchToSlot: () {
-    setState(() {
-      _currentNavIndex = 1; // index slot game
-    });
-    _pageController.jumpToPage(1);
-  },
+              setState(() {
+                _currentNavIndex = 1;
+              });
+              _pageController.jumpToPage(1);
+            },
           ),
           _buildSlotScreen(),
           const ProfilePage(),
@@ -537,14 +493,17 @@ Future<void> _loadSpinCounter() async {
       ),
       bottomNavigationBar: ModernBottomNavBar(
         currentIndex: _currentNavIndex,
-        onTap: _handleNavTap,
+        onTap: (index) {
+          if (!_isSpinning) {
+            _handleNavTap(index);
+          }
+        },
       ),
     );
   }
 
   @override
   void dispose() {
-    GameLogic.resetStatistics();
     for (var row in _scrollControllers) {
       for (var controller in row) {
         controller.dispose();
