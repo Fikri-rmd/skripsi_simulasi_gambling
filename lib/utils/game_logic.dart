@@ -122,6 +122,8 @@ class GameLogic {
 
   static Queue<bool> activeCyclePool = Queue<bool>();
   static const int cycleLength = 10;
+  static Queue<String> symbolCyclePool = Queue<String>();
+  static const int symbolCycleLength = 10; 
   static const String _spinsSinceLastWinKey = 'spinsSinceLastWin';
   static int spinsSinceLastWin = 0;
   static bool _isCooldownActive = false;
@@ -133,6 +135,28 @@ class GameLogic {
     final prefs = await SharedPreferences.getInstance();
     spinsSinceLastWin = prefs.getInt(_spinsSinceLastWinKey) ?? 0;
     _isCooldownActive = prefs.getBool(_isCooldownActiveKey) ?? false;
+  }
+
+  static void _createSymbolCycle() {
+    symbolCyclePool.clear();
+    final List<String> cyclePatterns = [];
+    
+    settings.symbolRates.forEach((symbol, rate) {
+      final count = (symbolCycleLength * rate).round();
+      for (int i = 0; i < count; i++) {
+        cyclePatterns.add(symbol);
+      }
+    });
+
+    while (cyclePatterns.length < symbolCycleLength) {
+      cyclePatterns.add(getRandomSymbol());
+    }
+    while (cyclePatterns.length > symbolCycleLength) {
+      cyclePatterns.removeLast();
+    }
+
+    cyclePatterns.shuffle(_random);
+    symbolCyclePool.addAll(cyclePatterns);
   }
 
   static void _createNewCycle() {
@@ -172,8 +196,11 @@ class GameLogic {
     isWin = activeCyclePool.removeFirst();
   }
   if (isWin) {
-    String winSymbol = getRandomSymbol();
-    return _generateLiveWinningGrid(winSymbol);
+    if (symbolCyclePool.isEmpty) {
+      _createSymbolCycle();
+    }
+    String winningSymbol = symbolCyclePool.removeFirst();
+    return _generateLiveWinningGrid(winningSymbol);
   } else {
     return _generateNearMissLosingGrid();
   }
@@ -273,6 +300,8 @@ class GameLogic {
     settings.validateSymbolRates();
     spinsSinceLastWin = 0;
     _isCooldownActive = true;
+    activeCyclePool.clear();
+    symbolCyclePool.clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_isCooldownActiveKey, _isCooldownActive);
     await _saveSpinsSinceLastWin(); 
@@ -316,6 +345,7 @@ class GameLogic {
     spinsSinceLastWin = 0;
     _isCooldownActive = false;
     activeCyclePool.clear();
+    symbolCyclePool.clear();
   }
   
   static List<WinLine> checkWinLines(List<List<String>> grid) {
