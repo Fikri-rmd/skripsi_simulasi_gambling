@@ -18,7 +18,7 @@ class ResetSuccessDialog extends StatelessWidget {
       ),
       content: Text(
       'Permainan telah direset ke kondisi awal\n'
-      '🪙 Saldo: 500 Koin\n',
+      '🪙 Saldo: 1000 Koin\n',
       textAlign: TextAlign.center,
       style: TextStyle(
         fontSize: 16,

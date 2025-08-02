@@ -37,6 +37,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   int _winCount = 0;
   int _loseCount = 0;
   int _totalWinnings = 0;
+  int _totalSpent = 0;
   Map<String, int> _symbolWinCount = {};
   bool _isAutoSpinning = false;
   int _autoSpinCounter = 0;
@@ -160,6 +161,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     setState(()  {
       _coins = 1000;
       _totalWinnings = 0;
+      _totalSpent = 0;
       _spinCount = 0;
       _totalSpinCounter = 0;
       _winCount = 0;
@@ -188,6 +190,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     setState(() {
       _spinCount++;
       _coins -= 10;
+      _totalSpent += 10;
       _isSpinning = true;
       _winLines = [];
       _totalSpinCounter++;
@@ -433,21 +436,44 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     );
   }
   Widget _buildCoinCounters() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Tooltip(
-                message: 'Total Kemenangan',
-                child: Chip(
-                  avatar: const Icon(Icons.paid, color: Colors.yellow, size: 18), // Icon untuk total menang
-                  label: Text('$_totalWinnings', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  backgroundColor: Colors.green.shade700,
-                ),
-              ),
-    );
-  }
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+    child: Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: [
+        Tooltip(
+          message: 'Total Kemenangan',
+          child: Chip(
+            avatar: const Icon(Icons.star, color: Colors.yellow, size: 18),
+            label: Text('$_totalWinnings', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            backgroundColor: Colors.green.shade700,
+          ),
+        ),
+        Tooltip(
+          message: 'Total Pengeluaran',
+          child: Chip(
+            avatar: const Icon(Icons.arrow_downward, color: Colors.white, size: 18),
+            label: Text('$_totalSpent', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            backgroundColor: Colors.orange.shade800,
+          ),
+        ),
+        Tooltip(
+          message: 'Koin Saat Ini',
+          child: Chip(
+            label: Text('$_coins 🪙', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            backgroundColor: Colors.red.shade700,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildSlotScreen() {
     return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Expanded(
           child: SingleChildScrollView(
@@ -510,13 +536,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         const SizedBox(height: 8),
         Container(
           color: Colors.red.shade50,
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(5),
           child: const Text(
-            '• SIMULASI INI MEMPERLIHATKAN BAGAIMANA ALGORITMA JUDI ONLINE BEKERJA\n'
-            '• TIDAK ADA STRATEGI YANG BISA MENGALAHKAN MESIN YANG DIRANCANG UNTUK MENGUNTUNGKAN PEMILIK\n'
-            '• JUDI MENYEBABKAN KETERGANTUNGAN, MASALAH KEUANGAN, DAN KERETAKAN KELUARGA',
+            '• SIMULASI INI MEMPERLIHATKAN BAGAIMANA ALGORITMA JUDI ONLINE BEKERJA\n',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.red, fontSize: 12),
+            style: TextStyle(color: Colors.red, fontSize: 10),
           ),
         ),
         const SizedBox(height: 5),
@@ -580,13 +604,13 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
             tooltip: 'Cara Bermain',
           ),
           if (_currentNavIndex == 1) ...[
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Chip(
-                label: Text('$_coins 🪙', style: const TextStyle(color: Colors.white)),
-                backgroundColor: Colors.red.shade700,
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.all(8.0),
+            //   child: Chip(
+            //     label: Text('$_coins 🪙', style: const TextStyle(color: Colors.white)),
+            //     backgroundColor: Colors.red.shade700,
+            //   ),
+            // ),
             IconButton(
               icon: const Icon(Icons.restart_alt, color: Colors.white),
               onPressed: _resetGame,

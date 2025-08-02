@@ -22,7 +22,7 @@ class HelpDialog extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             Text('• Setiap putaran menghabiskan 10 koin'),
-            Text('• Anda mulai dengan 500 koin'),
+            Text('• Anda mulai dengan 1000 koin'),
             Text('• Dapatkan 4 simbol yang sama dalam satu garis untuk menang'),
             Text('• Garis menang bisa horizontal, vertikal, atau diagonal'),
             SizedBox(height: 16),
