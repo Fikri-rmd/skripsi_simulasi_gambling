@@ -23,7 +23,7 @@ class SlotGameScreen extends StatefulWidget {
 }
 
 class _SlotGameScreenState extends State<SlotGameScreen> {
-  int _coins = 500;
+  int _coins = 1000;
   List<WinLine> _winLines = [];
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   int _totalSpinCounter = 0;
@@ -36,6 +36,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   Map<String, int> _symbolFrequency = {};
   int _winCount = 0;
   int _loseCount = 0;
+  int _totalWinnings = 0;
+  Map<String, int> _symbolWinCount = {};
+  bool _isAutoSpinning = false;
+  int _autoSpinCounter = 0;
+  final List<String> _mainSymbols = const ['💎', '🍒', '🍋', '💰','🍊'];
 
   @override
   void initState() {
@@ -69,9 +74,15 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     await GameLogic.initialize();
     await _loadSpinCounter(); 
     await _loadStatistics();
+    _initializeSymbolWinCounts();
     setState(() {});
   }
   
+  void _initializeSymbolWinCounts() {
+    for (var symbol in _mainSymbols) {
+      _symbolWinCount[symbol] = 0;
+    }
+  }
   void _handleSettingsUpdated() {
     setState(() {});
   }
@@ -93,6 +104,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _winCount = 0;
       _loseCount = 0;
       _symbolFrequency = {};
+      _initializeSymbolWinCounts();
     });
   }
 
@@ -147,14 +159,17 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     await GameLogic.resetStatistics();
     setState(()  {
       _coins = 1000;
+      _totalWinnings = 0;
       _spinCount = 0;
       _totalSpinCounter = 0;
       _winCount = 0;
       _rows = List.generate(4, (_) => List.filled(4, '🎰'));
       _initScrollControllers();
       _isSpinning = false;
+      _isAutoSpinning = false; 
       _winLines = [];
       _loseCount = 0;
+      _initializeSymbolWinCounts();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -207,7 +222,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
     await Future.delayed(const Duration(milliseconds: 1000));
     if (mounted) {
-      _checkWin();
+      await _checkWin();
     }
   }
 
@@ -247,15 +262,25 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     }
   }
 
-  void _checkWin() {
+  Future<void> _checkWin() async{
     _winLines = GameLogic.checkWinLines(_rows);
     bool won = _winLines.isNotEmpty;
 
     if (won) {
       _winCount++;
       int totalReward = _winLines.fold(0, (sum, line) => sum + line.reward);
+      Set<String> winningSymbolsThisSpin = {};
+      for (var line in _winLines) {
+       if (_mainSymbols.contains(line.symbol)) {
+         winningSymbolsThisSpin.add(line.symbol);
+        }
+      }
       setState(() {
         _coins += totalReward;
+        _totalWinnings += totalReward;
+        for (var symbol in winningSymbolsThisSpin) {
+          _symbolWinCount.update(symbol, (value) => value + 1);
+        }
       });
 
       String details = _winLines.map((line) {
@@ -275,18 +300,52 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       }).join("\n");
 
       _saveGameHistory(true, totalReward, "Spin: $_spinCount | Kemenangan: +$totalReward Koin\n$details");
-      _showMessage("Kemenangan: +$totalReward Koin\n$details", isWin: true);
+      await _showMessage("Kemenangan: +$totalReward Koin\n$details", isWin: true,autoClose: _isAutoSpinning,);
     } else {
       _loseCount++;
       _saveGameHistory(false, -10, "Tidak ada kombinasi pemenang");
-      _showMessage(
+      await _showMessage(
         'Tidak ada garis menang\n'
         '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
         isWin: false,
+        autoClose: _isAutoSpinning
       );
     }
     _saveStatistics();
   }
+
+  void _toggleAutoSpin() {
+    if (_isAutoSpinning) {
+      setState(() {
+        _isAutoSpinning = false;
+      });
+    } else {
+      setState(() {
+        _isAutoSpinning = true;
+        _autoSpinCounter = 0;
+      });
+      _runAutoSpinCycle();
+    }
+  }
+  Future<void> _runAutoSpinCycle() async {
+    while (_isAutoSpinning && _autoSpinCounter < 100 && _coins >= 10 && mounted) {
+      setState(() {
+        _autoSpinCounter++;
+      });
+      
+      await _spin();
+      
+      // await Future.delayed(const Duration(milliseconds: 300));
+    }
+    
+    if (mounted) {
+      setState(() {
+        _isAutoSpinning = false;
+      });
+    }
+  }
+
+
   Future<void> _saveStatistics() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('totalWins', _winCount);
@@ -314,8 +373,17 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     }
   }
 
-  void _showMessage(String message, {required bool isWin}) {
-    showDialog(
+  Future<void> _showMessage(String message, {required bool isWin, bool autoClose = false}) async{
+    if (autoClose && mounted) {
+    Future.delayed(const Duration(milliseconds: 500), () {
+
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+    await showDialog(
       context: context,
       builder: (context) => WinLossDialog(
         message: message,
@@ -343,6 +411,40 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       _pageController.jumpToPage(index);
     });
   }
+  
+  Widget _buildSymbolWinCounters() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12.0,
+        runSpacing: 8.0,
+        children: _mainSymbols.map((symbol) {
+          return Chip(
+            avatar: Text(symbol, style: const TextStyle(fontSize: 16)),
+            label: Text(
+              '${_symbolWinCount[symbol] ?? 0}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: Colors.amber.shade100,
+          );
+        }).toList(),
+      ),
+    );
+  }
+  Widget _buildCoinCounters() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Tooltip(
+                message: 'Total Kemenangan',
+                child: Chip(
+                  avatar: const Icon(Icons.paid, color: Colors.yellow, size: 18), // Icon untuk total menang
+                  label: Text('$_totalWinnings', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  backgroundColor: Colors.green.shade700,
+                ),
+              ),
+    );
+  }
 
   Widget _buildSlotScreen() {
     return Column(
@@ -359,10 +461,34 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
             ),
           ),
         ),
+        _buildSymbolWinCounters(),
+        _buildCoinCounters(),
+        const SizedBox(height: 4),
         Text('Menang: $_winCount | Kalah: $_loseCount'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: ElevatedButton.icon(
+          child: Row( 
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isAutoSpinning ? Colors.red.shade700 : Colors.grey.shade600,
+                  foregroundColor: Colors.white,
+                   padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                   shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                onPressed: (_isSpinning && !_isAutoSpinning) ? null : _toggleAutoSpin,
+                child: Text(
+                  _isAutoSpinning 
+                    ? 'STOP (${_autoSpinCounter}/100)' 
+                    : 'AUTO SPIN 100x',
+                   style: const TextStyle(fontSize: 14),
+                ),
+              ),
+              const SizedBox(width: 16),
+            ElevatedButton.icon(
             icon: const Icon(Icons.casino, size: 28),
             label: const Text('PUTAR', 
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -374,8 +500,8 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
                 borderRadius: BorderRadius.circular(20)),
               elevation: 5,
             ),
-            onPressed: _isSpinning ? null : _spin,
-          ),  
+            onPressed:  _isSpinning || _isAutoSpinning ? null : _spin,
+          ),])  
         ),
         Text(
           'Total Spin: $_totalSpinCounter',
@@ -445,7 +571,7 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SLOT MACHINE SIMULATOR'),
+        title: const Text('SLOT SIMULATOR'),
         backgroundColor: Colors.red.shade900,
         actions: [
           IconButton(
