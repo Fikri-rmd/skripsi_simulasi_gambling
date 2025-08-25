@@ -190,7 +190,7 @@ class GameLogic {
     await prefs.setInt(_spinsSinceLastWinKey, spinsSinceLastWin);
   }
 
-  static List<List<String>> generateSymbols() {
+  static List<List<String>> generateSymbols(){
     bool isWin;
 
     if (_isCooldownActive && spinsSinceLastWin < settings.minSpinToWin) {

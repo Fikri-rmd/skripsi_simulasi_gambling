@@ -35,16 +35,16 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
     'Pengaturan Probabilitas',
     'SIMULATOR EDUKASI JUDI',
     'Pusat Edukasi',
-    'Simulasi Bandar',
+    'Simulasi Admin(bandar)',
     'Profil Pengguna', 
-    'Pusat Bantuan'
+    'Pusat Bantuan',
   ];
   final GlobalKey<ProfilePageState> _profilePageKey = GlobalKey<ProfilePageState>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   int _totalSpinCounter = 0;
   int _spinCount = 0;
   bool _isSpinning = false;
-  int _currentNavIndex = 1;
+  int _currentNavIndex = 2;
   late PageController _pageController;
   List<List<ScrollController>> _scrollControllers = [];
   List<List<bool>> _isRolling = [];
@@ -587,14 +587,13 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
             bool tutorialSelesai = prefs.getBool('tutorial_selesai_v2') ?? false;
             if (!tutorialSelesai && mounted) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                // Alur tutorial baru sesuai permintaan Anda
                 ShowCaseWidget.of(context).startShowCase([
                   _keyEdukasi,
                   _keySettings,
                   _keyMesinSlot,
                   _keyTombolSpin,
                   _keyModeBandar,
-                  _keyBantuan
+                  _keyBantuan,
                 ]);
                 prefs.setBool('tutorial_selesai_v2', true);
               });

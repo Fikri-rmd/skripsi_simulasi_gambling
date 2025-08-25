@@ -70,12 +70,12 @@ class _BandarModeScreenState extends State<BandarModeScreen> {
         child: Column(
           children: [
             const Text(
-              'Simulasi Mode Bandar',
+              'Simulasi Mode Admin (Bandar)',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.blueGrey),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Lihat bagaimana keuntungan bandar (Anda) selalu naik dan saldo pemain (simulasi) selalu turun dalam jangka panjang.',
+              'Lihat bagaimana keuntungan Admin(bandar) selalu naik dan saldo pemain (simulasi) selalu turun dalam jangka panjang.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -116,7 +116,7 @@ class _BandarModeScreenState extends State<BandarModeScreen> {
               children: [
                 Column(
                   children: [
-                    const Text('Keuntungan Bandar', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                    const Text('Keuntungan Admin(bandar)', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
                     Text('${_casinoProfit.toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   ],
                 ),

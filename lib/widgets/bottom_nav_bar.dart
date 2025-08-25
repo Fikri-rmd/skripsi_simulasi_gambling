@@ -27,6 +27,17 @@ class ModernBottomNavBar extends StatelessWidget {
           topLeft: Radius.circular(10),
           topRight: Radius.circular(10),
         ),
+        child: Theme(
+          data: Theme.of(context).copyWith(
+            navigationBarTheme: NavigationBarThemeData(
+              labelTextStyle: MaterialStateProperty.all(
+                const TextStyle(
+                  color: Colors.white, 
+                  fontSize: 12, 
+                ),
+              ),
+            ),
+          ),
         child: NavigationBar(
           backgroundColor: Colors.blueGrey.shade800,
           elevation: 8,
@@ -40,9 +51,10 @@ class ModernBottomNavBar extends StatelessWidget {
         Showcase(
           key: keySettings,
           description: 'Sebelum simulasi, kunjungi halaman ini untuk mengatur probabilitas dan melihat bagaimana bandar bisa mengontrol peluang menang.',
-          child: const NavigationDestination(
-            icon: Icon(Icons.settings_outlined, color: Colors.white70),
+            child: const NavigationDestination(
+            icon: Icon(Icons.settings_outlined, color: Colors.white),
             selectedIcon: Icon(Icons.settings, color: Colors.white),
+
             label: 'Settings',
           ),
         ),
@@ -92,6 +104,7 @@ class ModernBottomNavBar extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
