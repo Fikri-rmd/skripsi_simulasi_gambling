@@ -1,5 +1,5 @@
-import 'dart:collection';
 import 'dart:math';
+import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -69,7 +69,6 @@ class GameSettings {
     final prefs = await SharedPreferences.getInstance();
     double winPercentage = prefs.getDouble('winPercentage') ?? 0.2;
     int minSpinToWin = prefs.getInt('minSpinToWin') ?? 5;
-    
     Map<String, double> defaultRates = {
       '🍒': 0.25, '🍋': 0.25, '💎': 0.15, '💰': 0.15,
       '🍊': 0.20,
@@ -112,7 +111,7 @@ class GameSettings {
 class GameLogic {
   static final Random _random = Random();
   static GameSettings settings = GameSettings(
-    winPercentage: 0.5,
+    winPercentage: 0.2,
     minSpinToWin: 5,
     symbolRates: {
       '🍒': 0.25, '🍋': 0.25, '💎': 0.15, '💰': 0.15,
@@ -127,14 +126,28 @@ class GameLogic {
   static const String _spinsSinceLastWinKey = 'spinsSinceLastWin';
   static int spinsSinceLastWin = 0;
   static bool _isCooldownActive = false;
+  static Map<String, int> getCooldownStatus() {
+    if (_isCooldownActive && spinsSinceLastWin < settings.minSpinToWin) {
+      return {
+        'currentLosses': spinsSinceLastWin, 
+        'requiredLosses': settings.minSpinToWin, 
+      };
+    }
+    return {};
+  }
   static const String _isCooldownActiveKey = 'isCooldownActive';
 
-  
+  // static Queue<bool> get cyclePreview => UnmodifiableQueueView(activeCyclePool);
+  static Queue<bool> get cyclePreview => Queue.from(activeCyclePool);
+
   static Future<void> initialize() async {
     settings = await GameSettings.loadFromPrefs();
     final prefs = await SharedPreferences.getInstance();
     spinsSinceLastWin = prefs.getInt(_spinsSinceLastWinKey) ?? 0;
-    _isCooldownActive = prefs.getBool(_isCooldownActiveKey) ?? false;
+    _isCooldownActive = prefs.getBool(_isCooldownActiveKey) ?? true;
+    if (activeCyclePool.isEmpty) {
+      _createNewCycle();
+    }
   }
 
   static void _createSymbolCycle() {
@@ -189,6 +202,7 @@ class GameLogic {
         final prefs = SharedPreferences.getInstance();
         prefs.then((p) => p.setBool(_isCooldownActiveKey, false));
       }
+      return _generateNearMissLosingGrid();
     }else {
       if (activeCyclePool.isEmpty) {
       _createNewCycle();
@@ -302,9 +316,12 @@ class GameLogic {
     _isCooldownActive = true;
     activeCyclePool.clear();
     symbolCyclePool.clear();
+    _createNewCycle();    
+    _createSymbolCycle();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_isCooldownActiveKey, _isCooldownActive);
     await _saveSpinsSinceLastWin(); 
+    
   }
 
   static String getRandomSymbol() {
@@ -343,7 +360,7 @@ class GameLogic {
     await prefs.remove(_spinsSinceLastWinKey);
     await prefs.remove(_isCooldownActiveKey);
     spinsSinceLastWin = 0;
-    _isCooldownActive = false;
+    _isCooldownActive = true;
     activeCyclePool.clear();
     symbolCyclePool.clear();
   }

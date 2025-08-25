@@ -18,8 +18,8 @@ class ProbabilitySettingsPage extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  // ignore: library_private_types_in_public_api
-  _ProbabilitySettingsPageState createState() => _ProbabilitySettingsPageState();
+  _ProbabilitySettingsPageState createState() =>
+      _ProbabilitySettingsPageState();
 }
 
 class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
@@ -27,6 +27,13 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
   late int _minSpinToWin;
   late Map<String, double> _symbolRates;
 
+  final Map<String, int> symbolRewards = {
+    '🍒': 3,
+    '🍋': 4,
+    '🍊': 5,
+    '💎': 10,
+    '💰': 15,
+  };
   @override
   void initState() {
     super.initState();
@@ -35,15 +42,16 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
     _symbolRates = Map<String, double>.from(widget.initialSymbolRates);
   }
 
-  double get _totalSymbolRate => _symbolRates.values.fold(0.0, (a, b) => a + b);
+  double get _totalSymbolRate =>
+      _symbolRates.values.fold(0.0, (a, b) => a + b);
 
   void _resetToDefaultSettings() {
     setState(() {
-      _winPercentage = 0.5;
+      _winPercentage = 0.2;
       _minSpinToWin = 5;
       _symbolRates = {
         '🍒': 0.25, '🍋': 0.25, '💎': 0.15, '💰': 0.15,
-      '🍊': 0.20,
+        '🍊': 0.20,
       };
     });
 
@@ -54,6 +62,52 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
       ),
     );
   }
+
+void _adjustSymbolRates(String changedKey, double newValue) {
+  setState(() {
+    final double oldValue = _symbolRates[changedKey]!;
+    int budgetInChunks = ((oldValue - newValue) / 0.05).round();
+    if (budgetInChunks == 0) return;
+    _symbolRates[changedKey] = newValue;
+    List<String> candidates;
+    if (budgetInChunks > 0) { 
+      candidates = _symbolRates.keys
+          .where((k) => k != changedKey && _symbolRates[k]! < 1.0)
+          .toList();
+      candidates.sort((a, b) => _symbolRates[a]!.compareTo(_symbolRates[b]!));
+    } else { 
+      candidates = _symbolRates.keys
+          .where((k) => k != changedKey && _symbolRates[k]! > 0.0)
+          .toList();
+      candidates.sort((a, b) => _symbolRates[b]!.compareTo(_symbolRates[a]!));
+    }
+
+    if (candidates.isEmpty) return; 
+
+    int chunksToDistribute = budgetInChunks.abs();
+    for (int i = 0; i < chunksToDistribute; i++) {
+      String keyToAdjust = candidates[i % candidates.length];
+      
+      double change = (budgetInChunks > 0) ? 0.05 : -0.05;
+      _symbolRates[keyToAdjust] = (_symbolRates[keyToAdjust]! + change).clamp(0.0, 1.0);
+    }
+
+    final double currentSum = _symbolRates.values.fold(0.0, (a, b) => a + b);
+    if ((currentSum - 1.0).abs() > 0.001) {
+       String? maxKey;
+       double maxValue = -1;
+       _symbolRates.forEach((key, value) {
+         if (value > maxValue) {
+           maxValue = value;
+           maxKey = key;
+         }
+       });
+       if(maxKey != null) {
+          _symbolRates[maxKey!] = (_symbolRates[maxKey]! + (1.0 - currentSum));
+       }
+    }
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -80,30 +134,28 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               ),
             ),
             const SizedBox(height: 20),
-            
             _buildSectionHeader('Persentase Kemenangan Umum'),
             _buildWinPercentageSetting(),
-            
             const SizedBox(height: 10),
             _buildSectionHeader('Jumlah Spin Minimum untuk Menang'),
             _buildSpinSetting(),
-            
             const SizedBox(height: 10),
             _buildSectionHeader('Persentase Kemunculan per Simbol'),
             _buildTotalProbabilityIndicator(),
             ..._buildSymbolSettings(),
-            
             Padding(
               padding: const EdgeInsets.only(top: 30, bottom: 20),
               child: Center(
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.save, size: 24),
                   label: const Text('SIMPAN',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red.shade900,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 24),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16)),
                   ),
@@ -123,7 +175,8 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey.shade800,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 30),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14, horizontal: 30),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
@@ -175,14 +228,18 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
             style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isTotalValid ? Colors.green.shade800 : Colors.red.shade800),
+                color: isTotalValid
+                    ? Colors.green.shade800
+                    : Colors.red.shade800),
           ),
           Text(
             '${(total * 100).toStringAsFixed(0)}%',
             style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: isTotalValid ? Colors.green.shade800 : Colors.red.shade800),
+                color: isTotalValid
+                    ? Colors.green.shade800
+                    : Colors.red.shade800),
           ),
         ],
       ),
@@ -210,7 +267,8 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               activeColor: Colors.red,
             ),
             const SizedBox(height: 8),
-            const Text('Peluang kemenangan per spin setelah mencapai spin minimum'),
+            const Text(
+                'Peluang kemenangan per spin setelah mencapai spin minimum'),
             const SizedBox(height: 10),
             Text(
               '${(_winPercentage * 100).toStringAsFixed(0)}%',
@@ -243,7 +301,8 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
               activeColor: Colors.red,
             ),
             const SizedBox(height: 8),
-            const Text('Jumlah spin minimum sebelum mulai mendapatkan kemenangan'),
+            const Text(
+                'Jumlah spin minimum sebelum mulai mendapatkan kemenangan'),
             const SizedBox(height: 10),
             Text(
               '$_minSpinToWin Spin',
@@ -281,14 +340,13 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
                 divisions: 20,
                 label: '${(entry.value * 100).toStringAsFixed(1)}%',
                 onChanged: (value) {
-                  setState(() {
-                    _symbolRates[entry.key] = value;
-                  });
+                  _adjustSymbolRates(entry.key, value);
                 },
               ),
               Text(
                 '${(entry.value * 100).toStringAsFixed(1)}%',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -307,8 +365,9 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('MENGERTI',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-          ),)
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.red)),
+          )
         ],
       ),
     );
@@ -317,7 +376,8 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
   Future<void> _saveSettings() async {
     final totalProbability = _totalSymbolRate;
     if ((totalProbability - 1.0).abs() > 0.001) {
-      _showValidationDialog('Total probabilitas semua simbol harus tepat 100%. Saat ini totalnya adalah ${(totalProbability * 100).toStringAsFixed(0)}%.');
+      _showValidationDialog(
+          'Total probabilitas semua simbol harus tepat 100%. Saat ini totalnya adalah ${(totalProbability * 100).toStringAsFixed(0)}%.');
       return;
     }
     final activeSymbols = _symbolRates.values.where((v) => v > 0).length;
@@ -336,7 +396,6 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
 
       await newSettings.saveToPrefs();
       GameLogic.updateSettings(newSettings);
-      GameLogic.activeCyclePool.clear();
       Future.microtask(() {
         widget.onSettingsUpdated?.call();
       });
@@ -350,7 +409,6 @@ class _ProbabilitySettingsPageState extends State<ProbabilitySettingsPage> {
         );
       }
       widget.onSaveAndSwitchToSlot?.call();
-
     } catch (e) {
       final errorMessage = e.toString().replaceAll("Exception: ", "");
       _showValidationDialog(errorMessage);

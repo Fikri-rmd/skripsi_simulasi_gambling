@@ -9,10 +9,10 @@ class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  State<ProfilePage> createState() => ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class ProfilePageState extends State<ProfilePage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   // bool _isLoadingHistory = true;
@@ -149,7 +149,7 @@ Future<void> _resetGameStatistics() async {
     );
   }
 
-  void _toggleEdit() {
+  void toggleEdit() {
     setState(() {
       _isEditing = !_isEditing;
       if (!_isEditing) {
@@ -158,7 +158,7 @@ Future<void> _resetGameStatistics() async {
     });
   }
 
-  void _saveProfile() {
+  void saveProfile() {
     if (_nameController.text.isEmpty) {
       _showErrorDialog('Nama tidak boleh kosong');
       return;
@@ -183,13 +183,13 @@ Future<void> _resetGameStatistics() async {
         title: const Text('Konfirmasi Logout'),
         content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('tidak',style: TextStyle(color: Colors.grey))),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _logout();
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            child: const Text('Ya', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -240,13 +240,6 @@ Future<void> _resetGameStatistics() async {
         : '-';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil Pengguna'),
-        actions: [
-          IconButton(icon: Icon(_isEditing ? Icons.close : Icons.edit), onPressed: _toggleEdit),
-          if (_isEditing) IconButton(icon: const Icon(Icons.save), onPressed: _saveProfile),
-        ],
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(

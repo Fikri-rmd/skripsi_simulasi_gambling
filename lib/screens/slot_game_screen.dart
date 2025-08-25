@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:showcaseview/showcaseview.dart';
 import 'package:simulasi_slot/dialogs/help_dialog.dart';
 import 'package:simulasi_slot/dialogs/reset_dialog.dart';
 import 'package:simulasi_slot/dialogs/win_loss_dialog.dart';
@@ -13,11 +14,15 @@ import 'package:simulasi_slot/utils/game_logic.dart';
 import 'package:simulasi_slot/widgets/bottom_nav_bar.dart';
 import 'package:simulasi_slot/widgets/slot_machine.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:simulasi_slot/screens/education_center_page.dart';
+import 'package:simulasi_slot/screens/bandar_mode_screen.dart';
+import 'package:simulasi_slot/screens/get_help_page.dart';
+import 'package:simulasi_slot/widgets/algorithm_visualizer_widget.dart';
 
 class SlotGameScreen extends StatefulWidget {
   final bool isGuest;
   const SlotGameScreen({super.key, this.isGuest = false});
-
+  
   @override
   State<SlotGameScreen> createState() => _SlotGameScreenState();
 }
@@ -25,6 +30,16 @@ class SlotGameScreen extends StatefulWidget {
 class _SlotGameScreenState extends State<SlotGameScreen> {
   int _coins = 1000;
   List<WinLine> _winLines = [];
+  Map<String, int> _lastSpinCooldownStatus = {}; 
+  final List<String> _pageTitles = [
+    'Pengaturan Probabilitas',
+    'SIMULATOR EDUKASI JUDI',
+    'Pusat Edukasi',
+    'Simulasi Bandar',
+    'Profil Pengguna', 
+    'Pusat Bantuan'
+  ];
+  final GlobalKey<ProfilePageState> _profilePageKey = GlobalKey<ProfilePageState>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   int _totalSpinCounter = 0;
   int _spinCount = 0;
@@ -38,10 +53,16 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   int _loseCount = 0;
   int _totalWinnings = 0;
   int _totalSpent = 0;
-  Map<String, int> _symbolWinCount = {};
+  final Map<String, int> _symbolWinCount = {};
   bool _isAutoSpinning = false;
   int _autoSpinCounter = 0;
   final List<String> _mainSymbols = const ['💎', '🍒', '🍋', '💰','🍊'];
+  final GlobalKey _keyEdukasi = GlobalKey();
+  final GlobalKey _keySettings = GlobalKey();
+  final GlobalKey _keyMesinSlot = GlobalKey();
+  final GlobalKey _keyTombolSpin = GlobalKey();
+  final GlobalKey _keyModeBandar = GlobalKey();
+  final GlobalKey _keyBantuan = GlobalKey();
 
   @override
   void initState() {
@@ -99,7 +120,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
         await prefs.remove(key);
       }
     }
-    
     setState(() {
       _totalSpinCounter = 0;
       _winCount = 0;
@@ -186,8 +206,9 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 
   Future<void> _spin() async {
     if (_coins < 10 || _isSpinning) return;
-    
+    final cooldownStatus = GameLogic.getCooldownStatus();
     setState(() {
+      _lastSpinCooldownStatus = cooldownStatus;
       _spinCount++;
       _coins -= 10;
       _totalSpent += 10;
@@ -306,13 +327,21 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       await _showMessage("Kemenangan: +$totalReward Koin\n$details", isWin: true,autoClose: _isAutoSpinning,);
     } else {
       _loseCount++;
-      _saveGameHistory(false, -10, "Tidak ada kombinasi pemenang");
-      await _showMessage(
-        'Tidak ada garis menang\n'
-        '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%',
-        isWin: false,
-        autoClose: _isAutoSpinning
-      );
+    String lossMessage;
+    if (_lastSpinCooldownStatus.isNotEmpty) {
+      final current = _lastSpinCooldownStatus['currentLosses']!;
+      final required = _lastSpinCooldownStatus['requiredLosses']!;
+      lossMessage = 'Anda dalam periode cooldown: Kalah ${current + 1} dari $required.';
+    } else {
+      lossMessage = 'Tidak ada garis menang\n'
+          '🎲 Spin: $_spinCount | ✅ Persentase: ${(GameLogic.settings.winPercentage * 100).toInt()}%';
+    }
+    _saveGameHistory(false, -10, "Tidak ada kombinasi pemenang");
+    await _showMessage(
+      lossMessage,
+      isWin: false,
+      autoClose: _isAutoSpinning,
+    );
     }
     _saveStatistics();
   }
@@ -338,7 +367,6 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
       
       await _spin();
       
-      // await Future.delayed(const Duration(milliseconds: 300));
     }
     
     if (mounted) {
@@ -411,7 +439,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
   void _handleNavTap(int index) {
     setState(() {
       _currentNavIndex = index;
-      _pageController.jumpToPage(index);
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     });
   }
   
@@ -472,31 +504,37 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
 }
 
   Widget _buildSlotScreen() {
-    return Column(
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 20),
+    child :  Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: Center(
-              child: SlotMachine(
-                rows: _rows,
-                scrollControllers: _scrollControllers,
-                isRolling: _isRolling,
-                winLines: _winLines,
-              ),
+        Showcase(
+            key: _keyMesinSlot,
+            title: 'Halaman Simulator',
+            description: 'Di sinilah Anda bisa melihat langsung cara kerja algoritma. Perhatikan, ini bukan permainan, ini adalah alat peraga.',
+            child: SlotMachine(
+              rows: _rows,
+              scrollControllers: _scrollControllers,
+              isRolling: _isRolling,
+              winLines: _winLines,
             ),
           ),
-        ),
+        const SizedBox(height: 16),
+        AlgorithmVisualizerWidget(cyclePreview: GameLogic.cyclePreview),
+        const SizedBox(height: 16),
         _buildSymbolWinCounters(),
+        const SizedBox(height: 16),
         _buildCoinCounters(),
         const SizedBox(height: 4),
-        Text('Menang: $_winCount | Kalah: $_loseCount'),
+        Text('Menang: $_winCount | Kalah: $_loseCount | Total Spin: $_spinCount'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row( 
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              ElevatedButton(
+              Expanded(
+                child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isAutoSpinning ? Colors.red.shade700 : Colors.grey.shade600,
                   foregroundColor: Colors.white,
@@ -511,111 +549,83 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
                     ? 'STOP (${_autoSpinCounter}/100)' 
                     : 'AUTO SPIN 100x',
                    style: const TextStyle(fontSize: 14),
+                   textAlign: TextAlign.center,
                 ),
               ),
+              ),
               const SizedBox(width: 16),
-            ElevatedButton.icon(
-            icon: const Icon(Icons.casino, size: 28),
-            label: const Text('PUTAR', 
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade800,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 40),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20)),
-              elevation: 5,
-            ),
-            onPressed:  _isSpinning || _isAutoSpinning ? null : _spin,
-          ),])  
-        ),
-        Text(
-          'Total Spin: $_totalSpinCounter',
-          style: const TextStyle(fontSize: 16, color: Colors.black54),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          color: Colors.red.shade50,
-          padding: const EdgeInsets.all(5),
-          child: const Text(
-            '• SIMULASI INI MEMPERLIHATKAN BAGAIMANA ALGORITMA JUDI ONLINE BEKERJA\n',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.red, fontSize: 10),
-          ),
-        ),
-        const SizedBox(height: 5),
-        ElevatedButton(
-          onPressed: _showEducationalDialog,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red.shade700,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-          ),
-          child: const Text('BACA LEBIH LANJUT'),
-        ),
-      ],
-    );
-  }
-
-  void _showEducationalDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('EDUKASI ANTI JUDI', style: TextStyle(color: Colors.red)),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('FAKTA TENTANG PERJUDIAN:', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
-              Text('• 99% pemain judi mengalami kerugian finansial jangka panjang'),
-              Text('• Mesin slot dirancang dengan "Return to Player" (RTP) di bawah 100%, artinya pemain selalu dirugikan dalam jangka panjang'),
-              Text('• Semakin sering bermain, semakin besar kemungkinan kalah karena algoritma house edge'),
-              SizedBox(height: 20),
-              Text('BAHAYA PERJUDIAN:', style: TextStyle(fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
-              Text('• Kecanduan judi bisa menyebabkan gangguan mental'),
-              Text('• Banyak kasus perceraian dan masalah keluarga akibat judi'),
-              Text('• 1 dari 5 pecandu judi mencoba bunuh diri'),
-              SizedBox(height: 20),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('MENGERTI', style: TextStyle(color: Colors.red)),
+              Expanded(
+                child: Showcase(
+                key: _keyTombolSpin,
+                description: 'Tekan tombol ini untuk menjalankan satu putaran simulasi. Ingat, hasilnya sudah ditentukan oleh algoritma, bukan keberuntungan.',
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.casino, size: 24),
+                  label: const Text('Mulai Spin'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueGrey.shade700,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                  ),
+                  onPressed: _isSpinning || _isAutoSpinning ? null : _spin,
+                ),
+              )),
+             ],
+            ),  
           ),
         ],
       ),
-    );
+    ); 
   }
 
   @override
   Widget build(BuildContext context) {
+    return ShowCaseWidget(
+        builder: (context) {
+          // Logika untuk memulai tutorial hanya sekali
+          final prefsFuture = SharedPreferences.getInstance();
+          prefsFuture.then((prefs) {
+            bool tutorialSelesai = prefs.getBool('tutorial_selesai_v2') ?? false;
+            if (!tutorialSelesai && mounted) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                // Alur tutorial baru sesuai permintaan Anda
+                ShowCaseWidget.of(context).startShowCase([
+                  _keyEdukasi,
+                  _keySettings,
+                  _keyMesinSlot,
+                  _keyTombolSpin,
+                  _keyModeBandar,
+                  _keyBantuan
+                ]);
+                prefs.setBool('tutorial_selesai_v2', true);
+              });
+            }
+          });
     return Scaffold(
       appBar: AppBar(
-        title: const Text('SLOT SIMULATOR'),
-        backgroundColor: Colors.red.shade900,
+        title: Text(_pageTitles[_currentNavIndex]), 
+        backgroundColor: Colors.blueGrey.shade900,
         actions: [
-          IconButton(
+          if (_currentNavIndex == 1) ...[
+            IconButton(
             icon: const Icon(Icons.help_outline),
             onPressed: _showHelp,
             tooltip: 'Cara Bermain',
           ),
-          if (_currentNavIndex == 1) ...[
-            // Padding(
-            //   padding: const EdgeInsets.all(8.0),
-            //   child: Chip(
-            //     label: Text('$_coins 🪙', style: const TextStyle(color: Colors.white)),
-            //     backgroundColor: Colors.red.shade700,
-            //   ),
-            // ),
             IconButton(
               icon: const Icon(Icons.restart_alt, color: Colors.white),
               onPressed: _resetGame,
               tooltip: 'Reset Game',
             ),
+          ],
+          if (_currentNavIndex == 4) ...[
+            IconButton(
+              icon: const Icon(Icons.edit), 
+              onPressed: () => _profilePageKey.currentState?.toggleEdit(),
+            ),
+            IconButton(
+              icon: const Icon(Icons.save),
+              onPressed: () => _profilePageKey.currentState?.saveProfile(),
+      )
           ],
         ],
       ),
@@ -637,7 +647,10 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
             },
           ),
           _buildSlotScreen(),
-          const ProfilePage(),
+          const EducationCenterPage(),
+          const BandarModeScreen(),
+          ProfilePage(key: _profilePageKey),
+          const GetHelpPage(),
         ],
       ),
       bottomNavigationBar: ModernBottomNavBar(
@@ -646,8 +659,11 @@ class _SlotGameScreenState extends State<SlotGameScreen> {
           if (!_isSpinning) {
             _handleNavTap(index);
           }
-        },
+          
+        }, keySettings: _keySettings, keyEdukasi: _keyEdukasi, keyBandar: _keyModeBandar, keyBantuan: _keyBantuan,  
       ),
+    );
+        },
     );
   }
 
